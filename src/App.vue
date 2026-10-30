@@ -309,7 +309,7 @@ type DensityArea = {
 };
 
 const GUIDE_MESSAGE_DURATION_MS = 5000;
-const SUGGEST_EMAIL = "xiang9872@gmail.com";
+const SUGGEST_ISSUE_URL = "https://github.com/xiangjianan/minidesk-huawei/issues/new";
 const GITHUB_REPO_URL = "https://github.com/xiangjianan/mini-desk";
 const GITHUB_REPO_LABEL = "xiangjianan / mini-desk";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
@@ -2925,9 +2925,7 @@ function about(anchor?: HTMLElement): void {
 }
 
 function suggestIssue(): void {
-  const subject = encodeURIComponent(uiText.value.app.suggestEmailSubject);
-  const body = encodeURIComponent(uiText.value.app.suggestEmailBody);
-  window.open(`mailto:${SUGGEST_EMAIL}?subject=${subject}&body=${body}`, "_blank", "noopener,noreferrer");
+  window.open(SUGGEST_ISSUE_URL, "_blank", "noopener,noreferrer");
 }
 
 function handleGlobalKeydown(event: KeyboardEvent): void {

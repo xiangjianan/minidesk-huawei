@@ -8256,7 +8256,7 @@ describe("App shell", () => {
     }
   });
 
-  it("opens an email draft to the author from the settings suggestion action", async () => {
+  it("opens a new GitHub issue from the settings suggestion action", async () => {
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
     const wrapper = mountApp();
 
@@ -8265,7 +8265,7 @@ describe("App shell", () => {
     await wrapper.vm.$nextTick();
 
     expect(openSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/^mailto:xiang9872@gmail\.com\?subject=.+&body=.+/),
+      "https://github.com/xiangjianan/minidesk-huawei/issues/new",
       "_blank",
       "noopener,noreferrer",
     );

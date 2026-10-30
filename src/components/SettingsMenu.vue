@@ -5,7 +5,7 @@ import {
   Check as CheckmarkOutline,
   CloudDownload as CloudDownloadOutline,
   CloudUpload as CloudUploadOutline,
-  Mail as MailOutline,
+  MessageSquare,
   Globe as GlobeOutline,
   Heart as HeartOutline,
   Images as ImagesOutline,
@@ -143,7 +143,7 @@ const options = computed(() => [
   },
   { type: "divider", key: "preferences-divider" },
   { label: text.value.settings.shortcutHelp, key: "shortcut-help", icon: renderIcon(KeyOutline) },
-  { label: text.value.settings.suggest, key: "suggest", icon: renderIcon(MailOutline) },
+  { label: text.value.settings.suggest, key: "suggest", icon: renderIcon(MessageSquare) },
   ...(SUPPORT_AUTHOR_ENABLED
     ? [{ label: text.value.settings.support, key: "support", icon: renderIcon(HeartOutline) }]
     : []),
