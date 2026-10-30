@@ -6235,6 +6235,12 @@ describe("App shell", () => {
 
   it("导入带 focusImages 内联载荷的工作区时把载荷写入 IndexedDB", async () => {
     vi.useFakeTimers();
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(1600);
+    const originalRect = HTMLElement.prototype.getBoundingClientRect;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      if (this.classList.contains("workbench-grid")) return { width: 1200, height: 748, top: 52, left: 0, right: 1200, bottom: 800, x: 0, y: 52, toJSON: () => undefined } as DOMRect;
+      return originalRect.call(this);
+    });
     const restoreIndexedDb = installMemoryImageDb();
     Object.assign(URL, { createObjectURL: vi.fn(() => "blob:todo-board"), revokeObjectURL: vi.fn() });
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
@@ -6282,6 +6288,7 @@ describe("App shell", () => {
       const imported = stored.workspaces[1];
       expect(imported.zoneWidthRatios).toEqual([0.1, 0.2, 0.3, 0.4]);
       expect(JSON.parse(localStorage.getItem(`mini-desk-workbench-widths:${imported.id}`)!)).toEqual([1000, 2000, 3000, 4000]);
+      expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 116px 232px 347px 463px");
       expect(imported.todos.morning[0].focusImages).toEqual([{ id: "img-1", payloadId: "pay-1", createdAt: 9 }]);
       await expect(getStoredImagePayload({ id: "img-1", payloadId: "pay-1" })).resolves.toBe("data:image/png;base64,imported");
     } finally {
@@ -6758,6 +6765,58 @@ describe("App shell", () => {
       // Add-new auto-numbers so no two workspaces share the displayed name.
       expect(stored.workspaces.map(resolveTitle)).toEqual(["MiniDesk", "MiniDesk 2"]);
     } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("exports through a generated browser download without requesting file-system access", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 29, 0, 4, 5));
+    const showSaveFilePicker = vi.fn();
+    const showDirectoryPicker = vi.fn();
+    let exportedBlob: Blob | undefined;
+    const createObjectURL = vi.fn((blob: Blob) => {
+      exportedBlob = blob;
+      return "blob:todo-board";
+    });
+    const revokeObjectURL = vi.fn();
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    Object.defineProperty(window, "showSaveFilePicker", { value: showSaveFilePicker, configurable: true });
+    Object.defineProperty(window, "showDirectoryPicker", { value: showDirectoryPicker, configurable: true });
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const pairedState = defaultState();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(pairedState));
+    const wrapper = mountApp();
+
+    try {
+      localStorage.setItem(`mini-desk-workbench-widths:${DEFAULT_WORKSPACE_ID}`, JSON.stringify([100, 200, 300, 400]));
+      const settings = wrapper.getComponent(SettingsMenu);
+      settings.vm.$emit("exportWorkspace", settings.element as HTMLElement);
+      await wrapper.vm.$nextTick();
+
+      expect(showSaveFilePicker).not.toHaveBeenCalled();
+      expect(showDirectoryPicker).not.toHaveBeenCalled();
+      expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+      expect(anchorClick).toHaveBeenCalled();
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:todo-board");
+      expect((anchorClick.mock.instances[0] as HTMLAnchorElement).download).toMatch(/^mini-desk-.+-20261029000405\.json$/);
+
+      expect(exportedBlob).toBeInstanceOf(Blob);
+      if (!exportedBlob) throw new Error("Expected export blob");
+      const exported = await exportedBlob.text();
+      expect(JSON.parse(exported)).toMatchObject({ miniDeskWorkspaceExport: true, version: 1 });
+      expect(JSON.parse(exported).workspace.zoneWidthRatios).toEqual([0.1, 0.2, 0.3, 0.4]);
+      expect(JSON.parse(exported).workspace).not.toHaveProperty("inbox");
+      expect(exported).not.toContain("0123456789AB");
+
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导出|备份|文件|准备/);
+    } finally {
+      delete (window as typeof window & { showSaveFilePicker?: unknown }).showSaveFilePicker;
+      delete (window as typeof window & { showDirectoryPicker?: unknown }).showDirectoryPicker;
       wrapper.unmount();
       vi.useRealTimers();
     }
@@ -7606,7 +7665,7 @@ describe("App shell", () => {
     }
   });
 
-  it("does not flash a stale Tips bubble when focusing a non-empty area", async () => {
+  it("keeps the current Tips bubble when focusing a non-empty notebook", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -7630,14 +7689,14 @@ describe("App shell", () => {
       wrapper.getComponent(SpacePanel).vm.$emit("focus", "workspace", wrapper.get(".text-panel").element as HTMLElement);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
     }
   });
 
-  it("shows Tips for empty clicked areas and no GIF for non-empty clicked areas", async () => {
+  it("keeps Tips when clicking another non-empty area", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T00:00:00.000Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -7683,8 +7742,8 @@ describe("App shell", () => {
       await wrapper.get(".quick-block").trigger("click");
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(false);
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("Ctrl+V 粘贴截图");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -7757,7 +7816,7 @@ describe("App shell", () => {
     }
   });
 
-  it("allows quick-link blank-area Tips to refresh after switching focus to another area", async () => {
+  it("keeps quick-link Tips when focusing the notebook until expiry", async () => {
     vi.useFakeTimers();
     const randomSpy = vi.spyOn(Math, "random");
     randomSpy
@@ -7787,6 +7846,9 @@ describe("App shell", () => {
       wrapper.getComponent(SpacePanel).vm.$emit("focus", "workspace", wrapper.get(".text-panel").element as HTMLElement);
       await wrapper.vm.$nextTick();
 
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toBe(firstTips);
+      await vi.advanceTimersByTimeAsync(6000);
+      await wrapper.vm.$nextTick();
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
 
       quick.vm.$emit("guide", "quickButtons", quick.element as HTMLElement);

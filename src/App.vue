@@ -804,6 +804,11 @@ function slugifyTitle(title: string): string {
   return trimmed.replace(/[\\/:*?"<>|]/g, "").slice(0, 24).trim() || "workspace";
 }
 
+function exportTimestamp(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+}
+
 function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
   const workspace = state.workspaces.find((item) => item.id === id);
   if (!workspace) return;
@@ -812,7 +817,7 @@ function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
   if (ratios) serialized.zoneWidthRatios = ratios;
   const content = JSON.stringify({ miniDeskWorkspaceExport: true, version: 1, workspace: serialized }, null, 2);
   const title = getWorkspaceBoardTitle(workspace);
-  downloadExportFile(content, `mini-desk-${slugifyTitle(title)}-${new Date().toISOString().slice(0, 10)}.json`);
+  downloadExportFile(content, `mini-desk-${slugifyTitle(title)}-${exportTimestamp(new Date())}.json`);
   showBubble("dataExported", anchor, { hideCompanionAfter: true });
 }
 
@@ -892,7 +897,7 @@ function syncLegacySpaceLines(): void {
 
 
 function showCompanion(guideKey?: GuideKey): void {
-  if (bubbleVisible.value && bubbleMessage.value && !activeGuideKey.value) return;
+  if (bubbleVisible.value && bubbleMessage.value) return;
   hideBubbleMessage({ clearRetainedContent: true });
   companionPosition.value = getToastPosition();
   activeGuideKey.value = guideKey ?? null;
@@ -918,11 +923,7 @@ function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false
 }
 
 function showAreaGuide(key: GuideKey, anchor?: HTMLElement): void {
-  if (bubbleVisible.value && bubbleMessage.value && !activeGuideKey.value) return;
-  if (activeGuideKey.value === key && bubbleVisible.value && Boolean(bubbleMessage.value)) {
-    companionPosition.value = getToastPosition();
-    return;
-  }
+  if (bubbleVisible.value && bubbleMessage.value) return;
   if (isGuideAreaEmpty(key, anchor)) {
     showGuideBubble(key, anchor, false);
     return;
@@ -2850,6 +2851,7 @@ async function importData(event: Event): Promise<void> {
       restoreWorkbenchWidthRatios(workspace.id, workspace.zoneWidthRatios);
       state.workspaces = [...state.workspaces, workspace];
       state.activeWorkspaceId = workspace.id;
+      boardEpoch.value += 1;
       await finishImport(workspace);
     };
     // Overwrite the existing same-name workspace in place (keep its id/createdAt,
@@ -2864,6 +2866,7 @@ async function importData(event: Event): Promise<void> {
       restoreWorkbenchWidthRatios(replacement.id, replacement.zoneWidthRatios);
       state.workspaces = state.workspaces.map((item) => (item.id === target.id ? replacement : item));
       state.activeWorkspaceId = target.id;
+      boardEpoch.value += 1;
       await finishImport(replacement);
     };
 
@@ -3404,7 +3407,7 @@ function randomGuideMessage(key: GuideKey): string {
 }
 
 function invalidateGuideCompanion(nextKey: GuideKey): void {
-  if (!activeGuideKey.value || activeGuideKey.value === nextKey || pendingConfirm.value) return;
+  if (bubbleVisible.value || !activeGuideKey.value || activeGuideKey.value === nextKey || pendingConfirm.value) return;
   hideCompanion();
 }
 

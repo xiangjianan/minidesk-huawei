@@ -2332,7 +2332,7 @@ button.notify-panel-preset:active {
   background: var(--accent);
 }
 
-button.notify-panel-preset:focus-visible {
+button.notify-panel-preset:focus-visible:where(:not([data-pointer-focus])) {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
@@ -4267,9 +4267,13 @@ button.workbench-resizer {
   background: color-mix(in srgb, var(--primary) 82%, transparent);
 }
 
-:focus-visible {
+:focus-visible:where(:not([data-pointer-focus])) {
   outline: 0;
   box-shadow: var(--focus-ring);
+}
+
+button[data-pointer-focus]:focus-visible {
+  outline: none;
 }
 
 button:active,
