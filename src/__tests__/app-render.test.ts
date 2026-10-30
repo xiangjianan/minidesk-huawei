@@ -6983,8 +6983,7 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("MiniDesk (100% AI BUILT)");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("把截图、提醒事项、快捷动作和便签缝合得恰到好处");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("无需任何登录，所有数据全部保存在浏览器本地。");
-      const repoLink = wrapper.get('[data-testid="companion-link"]');
-      expect(repoLink.text()).toBe("xiangjianan / mini-desk");
+      expect(wrapper.find('[data-testid="companion-link"]').exists()).toBe(false);
       expect(wrapper.find('[data-testid="companion-signature"]').exists()).toBe(false);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("100% 由 AI 开发");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("云霞 · 产品");
@@ -6993,9 +6992,6 @@ describe("App shell", () => {
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("👤 产品经理 — 云霞");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("牛马：Codex");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / mini-desk");
-      expect(wrapper.get('[data-testid="companion-link"]').attributes("href")).toBe("https://github.com/xiangjianan/mini-desk");
-      expect(wrapper.get('[data-testid="companion-link"]').attributes("target")).toBe("_blank");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -7045,7 +7041,7 @@ describe("App shell", () => {
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("MiniDesk");
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).not.toContain("给老婆做的 todolist 看板");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toContain("xiangjianan / mini-desk");
+      expect(wrapper.find('[data-testid="companion-link"]').exists()).toBe(false);
 
       await vi.advanceTimersByTimeAsync(9799);
       await wrapper.vm.$nextTick();

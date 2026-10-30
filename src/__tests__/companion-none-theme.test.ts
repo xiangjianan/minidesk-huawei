@@ -57,7 +57,7 @@ describe("companion none theme gating", () => {
   it("设置「关于」气泡在安静模式仍弹出（显式菜单请求带 explicit）", () => {
     const app = readFileSync(resolve(__dirname, "../App.vue"), "utf8");
     expect(app).toContain(
-      "{ hideCompanionAfter: true, explicit: true, linkText: GITHUB_REPO_LABEL, linkHref: GITHUB_REPO_URL }",
+      "{ hideCompanionAfter: true, explicit: true }",
     );
   });
 
