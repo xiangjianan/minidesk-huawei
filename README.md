@@ -170,7 +170,3 @@ Run `npm run build` to generate production files in `dist/`, ready to host as st
 ## About this project
 
 This repository is based on the main Mini Desk project. It keeps the local-first workbench while adapting its features and common apps for everyday work. Upstream updates can be merged as needed.
-
-## Acknowledgements
-
-Thanks to my girlfriend for her constant support, and for the many valuable suggestions on product details.
