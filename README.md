@@ -165,7 +165,7 @@ Run `npm run build` to generate production files in `dist/`, ready to host as st
 - `src/composables/`: composable logic such as reminder notifications.
 - `src/utils/`: text-editing utilities (indent, list markers, line moves) and friends.
 - `src/__tests__/`: component rendering, state compatibility, interaction contracts, deployment config, and message copy tests.
-- `static/`: companion GIFs and image assets; `public/`: Service Worker, manifest, and icons; `samples/`: sample import data.
+- `static/`: companion GIFs and image assets; `public/`: Service Worker, manifest, and icons.
 
 ## About this project
 

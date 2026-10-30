@@ -165,7 +165,7 @@ mini-desk-images-v1
 - `src/composables/`：提醒通知等组合式逻辑。
 - `src/utils/`：文本编辑（缩进、列表标记、行移动）等工具。
 - `src/__tests__/`：组件渲染、状态兼容、交互契约、部署配置和消息文案测试。
-- `static/`：陪伴 GIF 与图片素材；`public/`：Service Worker、manifest 与图标；`samples/`：示例导入数据。
+- `static/`：陪伴 GIF 与图片素材；`public/`：Service Worker、manifest 与图标。
 
 ## 关于项目
 
