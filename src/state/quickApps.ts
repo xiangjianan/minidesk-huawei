@@ -15,27 +15,9 @@ export interface QuickAppPreset {
 }
 
 export const QUICK_APP_PRESETS: readonly QuickAppPreset[] = [
-  // Shortcuts bridge: neither app exposes a list/folder-level deep link, but a shortcut
-  // running AppleScript ("show list"/"show folder") does — append the shortcut's name.
-  { title: { zh: "快捷指令", en: "Shortcuts" }, scheme: "shortcuts://run-shortcut?name=", hint: { zh: "指令名", en: "shortcut name" } },
-  { title: { zh: "微信", en: "WeChat" }, scheme: "wechat://", hint: { zh: "仅启动", en: "launch only" } },
-  { title: { zh: "钉钉", en: "DingTalk" }, scheme: "dingtalk://", hint: { zh: "仅启动", en: "launch only" } },
-  { title: { zh: "飞书", en: "Lark" }, scheme: "lark://", hint: { zh: "仅启动", en: "launch only" } },
-  { title: { zh: "企业微信", en: "WeCom" }, scheme: "wxwork://", hint: { zh: "message?userid=", en: "message?userid=" } },
-  // "sms:" opens iMessage; append the recipient's phone number, e.g. sms:13800138000.
-  { title: { zh: "iMessage", en: "iMessage" }, scheme: "sms:", hint: { zh: "手机号", en: "phone number" } },
+  { title: { zh: "WeLink", en: "WeLink" }, scheme: "im:", hint: { zh: "工号", en: "employee ID" } },
   { title: { zh: "VS Code", en: "VS Code" }, scheme: "vscode://", hint: { zh: "file/路径", en: "file/path" } },
-  { title: { zh: "Xcode", en: "Xcode" }, scheme: "xcode://", hint: { zh: "仅启动", en: "launch only" } },
-  { title: { zh: "App Store", en: "App Store" }, scheme: "macappstore://", hint: { zh: "应用链接", en: "app URL" } },
-  { title: { zh: "系统设置", en: "System Settings" }, scheme: "x-apple.systempreferences:", hint: { zh: "面板ID", en: "pane id" } },
-  // macOS system apps; Reminders registers no "reminders://" — its only scheme is ReminderKit's.
-  { title: { zh: "备忘录", en: "Notes" }, scheme: "notes://", hint: { zh: "仅启动", en: "launch only" } },
-  { title: { zh: "提醒事项", en: "Reminders" }, scheme: "x-apple-reminderkit://", hint: { zh: "仅启动", en: "launch only" } },
-  { title: { zh: "Slack", en: "Slack" }, scheme: "slack://", hint: { zh: "channel?...", en: "channel?..." } },
-  { title: { zh: "Spotify", en: "Spotify" }, scheme: "spotify://", hint: { zh: "track:ID", en: "track:ID" } },
-  { title: { zh: "Telegram", en: "Telegram" }, scheme: "tg://", hint: { zh: "resolve?domain=", en: "resolve?domain=" } },
-  { title: { zh: "Figma", en: "Figma" }, scheme: "figma://", hint: { zh: "file/KEY", en: "file/KEY" } },
-  { title: { zh: "Notion", en: "Notion" }, scheme: "notion://", hint: { zh: "页面链接", en: "page URL" } },
+  { title: { zh: "Outlook 邮件", en: "Outlook Mail" }, scheme: "ms-outlook://" },
 ];
 
 /** Resolve a preset's display title for the active language. */

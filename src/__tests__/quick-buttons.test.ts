@@ -1248,12 +1248,12 @@ describe("QuickButtons", () => {
 
     await openDialog(wrapper);
     await wrapper.findAll(".checkbox-stub")[3].trigger("click");
-    await wrapper.get(".quick-app-preset-select").setValue("wechat://");
+    await wrapper.get(".quick-app-preset-select").setValue("im:");
     await wrapper.get("form").trigger("submit.prevent");
 
     expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
-      title: "微信",
-      value: "wechat://",
+      title: "WeLink",
+      value: "im:",
       type: "app",
     });
 
@@ -1264,11 +1264,10 @@ describe("QuickButtons", () => {
     const wrapper = mountQuickButtons();
     await openDialog(wrapper);
     await wrapper.findAll(".checkbox-stub")[3].trigger("click");
-    await wrapper.get(".quick-app-preset-select").setValue("shortcuts://run-shortcut?name=");
     const inputs = wrapper.findAll(".quick-form input");
     await inputs[1].setValue("shortcuts://run-shortcut?name=打开购物列表");
     expect((inputs[0].element as HTMLInputElement).value).toBe("打开购物列表");
-    expect((wrapper.get(".quick-app-preset-select").element as HTMLSelectElement).value).toBe("shortcuts://run-shortcut?name=");
+    expect((wrapper.get(".quick-app-preset-select").element as HTMLSelectElement).value).toBe("");
     await inputs[1].setValue("shortcuts://run-shortcut?name=%E6%99%9A%E9%97%B4%E5%A4%8D%E7%9B%98&input=text");
     expect((inputs[0].element as HTMLInputElement).value).toBe("晚间复盘");
     await wrapper.get("form").trigger("submit.prevent");

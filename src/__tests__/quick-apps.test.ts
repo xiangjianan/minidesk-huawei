@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { QUICK_APP_PRESETS, isQuickAppScheme } from "../state/quickApps";
 
 describe("isQuickAppScheme", () => {
+  it("offers the requested app presets in order", () => {
+    expect(QUICK_APP_PRESETS.map(({ title, scheme }) => [title.zh, scheme])).toEqual([
+      ["WeLink", "im:"], ["VS Code", "vscode://"], ["Outlook 邮件", "ms-outlook://"],
+    ]);
+  });
+
   it("accepts the curated presets' schemes", () => {
     for (const preset of QUICK_APP_PRESETS) {
       expect(isQuickAppScheme(preset.scheme)).toBe(true);
