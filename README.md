@@ -1,8 +1,8 @@
-# Mini Desk
+# Mini Desk · Customized Edition
 
 **English** | [简体中文](README.zh-CN.md)
 
-Mini Desk is a quiet little desk.
+This customized edition of [Mini Desk](https://github.com/xiangjianan/minidesk) is a quiet little desk for everyday work.
 
 Screenshots, notes, reminders, and quick actions all live here — but it won't push you to become a machine.
 
@@ -12,13 +12,18 @@ It gathers the loose bits of daily work into a local-first browser desktop: scre
 
 Mini Desk is built with Vue 3, TypeScript, Vite, and Naive UI. The interface takes cues from Apple's Human Interface Guidelines, aiming for a compact, clear, low-distraction daily experience.
 
-Mini Desk is also an AI coding experiment: the product thinking, interaction trade-offs, and aesthetic judgment come from a human, while 100% of the code — from the UI and state management to local persistence — was written by AI (Claude Code) in conversation.
+Mini Desk is also an AI coding experiment: the product thinking, interaction trade-offs, and aesthetic judgment come from a human, while the code is developed primarily through conversations with AI.
 
 No account or sign-in required — all your data lives in the browser: page state in `localStorage`, image originals and custom GIF assets in same-site IndexedDB. It depends on no backend service, making it a good fit as a personal browser workbench.
 
-## Live site
+## What is customized
 
-- <https://minidesk.online>
+- Keeps the local workbench for images, quick actions, reminders, and notes, with data stored in the current browser.
+- Removes smart paste, connected mobile capture, and their server code. Core workbench features do not need a backend; ordinary paste remains available.
+- Narrows common app presets to WeLink (employee ID), VS Code, and Outlook Mail. Custom app schemes are still supported.
+- The feedback option in settings opens a GitHub issue in this repository.
+
+API requests and external links in quick actions may still require a network connection. App links depend on the installed application and its registered protocol.
 
 ## Quick start
 
@@ -81,7 +86,7 @@ npm run build   # build the production bundle
 
 ### Quick actions
 
-- Four button types: link, copy-text, API request, open app — 15 built-in presets including WeLink, WeChat, DingTalk, Feishu, and VS Code, with risky protocols blocked automatically.
+- Four button types: link, copy-text, API request, open app — built-in presets for WeLink, VS Code, and Outlook Mail; custom app schemes are supported and risky protocols are blocked automatically.
 - API buttons support method, headers, body, and response-copy strategies, with getJson / postJson / postForm templates built in.
 - Grouped by tag: tags can be colored, collapsed, double-click renamed, and drag-reordered; dragging a button across groups changes its tag.
 - Right-click empty space and paste to create a button; URL / app-protocol / text content is classified automatically; dropping text works the same way.
@@ -95,7 +100,7 @@ npm run build   # build the production bundle
 
 ### Settings & feedback
 
-- Settings menu: data (new workspace / import / export current workspace / clear data), language (中文 / English), GIF theme (including custom light/dark GIFs), feedback, help & shortcuts, about.
+- Settings menu: data (new workspace / import / export current workspace / clear data), language (中文 / English), GIF theme (including custom light/dark GIFs), feedback (GitHub issue), help & shortcuts, about.
 - The version number at the bottom opens "Release notes"; a red dot appears when a new version is available, and updates install in one click from inside.
 - The save status badge at the top shows: saved, saving, or unsaved changes.
 
@@ -148,25 +153,9 @@ The board is designed for desktop workflows: viewports 940px wide or narrower ge
 
 For local real-device debugging use `npm run preview:lan`; devices must accept the self-signed certificate warning once.
 
-## Deployment
+## Build and deployment
 
-The live site runs on Cloudflare Pages (project `todolist`):
-
-- <https://minidesk.online>
-
-```bash
-npm run deploy:cloudflare
-```
-
-Build-related environment variables: `VITE_BASE` (deployment subpath), `MINI_DESK_LAN` (enable self-signed HTTPS for real-device preview).
-
-To publish a release, build `dist` first, then zip the bundle as a release asset:
-
-```bash
-npm run build
-cd dist
-zip -qr ../dist-<version>.zip .
-```
+Run `npm run build` to generate production files in `dist/`, ready to host as static files. Use `VITE_BASE` for a deployment subpath and `MINI_DESK_LAN` to enable self-signed HTTPS for LAN previews.
 
 ## Project structure
 
@@ -178,16 +167,9 @@ zip -qr ../dist-<version>.zip .
 - `src/__tests__/`: component rendering, state compatibility, interaction contracts, deployment config, and message copy tests.
 - `static/`: companion GIFs and image assets; `public/`: Service Worker, manifest, and icons; `samples/`: sample import data.
 
-## On AI coding
+## About this project
 
-How Mini Desk gets built is the project's most interesting experiment: the human only decides "what", and hands everything else to AI.
-
-- Entirely conversational development: 886 commits up to v1.0.155 — roughly 23,000 lines of TypeScript / Vue / Python written by AI, without the human hand-writing a single line of implementation.
-- 1,230 automated tests were likewise written by AI test-first (TDD) and kept green throughout; after each change the AI reads the failing tests first, then writes the implementation.
-- Releases are automated: a custom release workflow in the repo (`.claude/skills/`) drives the AI through build, full test runs, Cloudflare deployment, GitHub Releases, and changelog upkeep — one person maintaining 100 releases.
-- The repo itself is a human-AI collaboration artifact: `CLAUDE.md` is the project manual written for the AI, and every changelog entry in `src/state/changelog.ts` was summarized by the AI at release time.
-
-Put differently: everything described here — from the four-zone workbench to offline use — is the product of the loop "state the requirement → AI implements → AI self-reviews → AI releases".
+This repository is based on the main Mini Desk project. It keeps the local-first workbench while adapting its features and common apps for everyday work. Upstream updates can be merged as needed.
 
 ## Acknowledgements
 

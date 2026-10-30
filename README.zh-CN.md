@@ -1,8 +1,8 @@
-# Mini Desk
+# Mini Desk · 定制版
 
 [English](README.md) | **简体中文**
 
-Mini Desk 是一张安静的小桌面。
+Mini Desk 定制版是一张面向日常工作的安静小桌面，基于 [Mini Desk](https://github.com/xiangjianan/minidesk) 开发。
 
 截图、便签、提醒和快捷动作都在这里，但它不会催你成为机器。
 
@@ -12,13 +12,18 @@ Do less, do it well.
 
 Mini Desk 基于 Vue 3、TypeScript、Vite 和 Naive UI 构建，界面风格参考 Apple Human Interface Guidelines，强调紧凑、清晰、低干扰的日常使用体验。
 
-Mini Desk 是一个 AI Coding 实践项目：产品构思、交互取舍与审美判断来自人类，从界面、状态管理到本地存储，代码实现 100% 由 AI（Claude Code）在对话中完成。
+Mini Desk 是一个 AI Coding 实践项目：产品构思、交互取舍与审美判断来自人类，从界面、状态管理到本地存储，代码实现主要通过与 AI 对话完成。
 
 无需注册登录，所有数据全部保存在浏览器本地：页面状态在 `localStorage`，图片原文和自定义 GIF 资源在同站点 IndexedDB。不依赖任何后端服务，适合作为个人浏览器工作台使用。
 
-## 在线地址
+## 定制版特点
 
-- <https://minidesk.online>
+- 保留图片、快捷动作、提醒事项和便签组成的本地工作台，数据保存在当前浏览器。
+- 移除智能粘贴、联网手机速记及其服务端代码，不需要后台服务即可使用核心工作台。普通粘贴仍可使用。
+- 常用应用预设按工作场景精简为 WeLink（输入工号）、VS Code 和 Outlook 邮件；也可自行填写其他应用协议。
+- 设置中的「提建议」会打开本仓库的 GitHub Issue。
+
+快捷动作中的 API 请求和外部链接仍可能需要网络；应用协议能否打开取决于设备上安装的应用及其协议支持。
 
 ## 快速开始
 
@@ -81,7 +86,7 @@ npm run build   # 构建生产产物
 
 ### 快捷动作
 
-- 四种按钮类型：链接、复制文本、API 请求、打开应用（内置 WeLink、微信、钉钉、飞书、VS Code 等 15 个预设，危险协议自动拦截）。
+- 四种按钮类型：链接、复制文本、API 请求、打开应用（内置 WeLink、VS Code、Outlook 邮件预设，支持自定义应用协议，危险协议自动拦截）。
 - API 按钮支持请求方法、Header、Body 和响应复制策略，内置 getJson / postJson / postForm 模板。
 - 按标签分组：标签可配色、折叠、双击重命名、拖动排序；按钮跨组拖拽即换标签。
 - 右键空白处粘贴即可创建按钮，URL / 应用协议 / 文本自动分类；拖入文本同理。
@@ -95,7 +100,7 @@ npm run build   # 构建生产产物
 
 ### 设置与反馈
 
-- 设置菜单：数据（新建工作区 / 导入 / 导出当前工作区 / 清空数据）、语言（中文 / English）、GIF 主题（含自定义浅色/深色 GIF）、提建议、帮助与快捷键、关于。
+- 设置菜单：数据（新建工作区 / 导入 / 导出当前工作区 / 清空数据）、语言（中文 / English）、GIF 主题（含自定义浅色/深色 GIF）、提建议（GitHub Issue）、帮助与快捷键、关于。
 - 底部版本号点击打开「更新记录」，有新版本时带红点提示，更新记录内可一键更新。
 - 顶部保存状态徽章显示：已保存、保存中、有未保存内容。
 
@@ -148,25 +153,9 @@ mini-desk-images-v1
 
 本地真机调试使用 `npm run preview:lan`；设备需接受一次自签名证书提示。
 
-## 部署
+## 构建与部署
 
-线上站点部署在 Cloudflare Pages（项目名 `todolist`）：
-
-- <https://minidesk.online>
-
-```bash
-npm run deploy:cloudflare
-```
-
-构建相关的环境变量：`VITE_BASE`（部署子路径）、`MINI_DESK_LAN`（真机预览时启用自签名 HTTPS）。
-
-发布版本时，先构建 `dist`，再将编译产物压缩为 release asset：
-
-```bash
-npm run build
-cd dist
-zip -qr ../dist-<version>.zip .
-```
+运行 `npm run build` 后，生产文件生成在 `dist/`，可部署到支持静态文件的环境。`VITE_BASE` 可用于配置部署子路径；`MINI_DESK_LAN` 用于局域网预览时启用自签名 HTTPS。
 
 ## 项目结构
 
@@ -178,16 +167,9 @@ zip -qr ../dist-<version>.zip .
 - `src/__tests__/`：组件渲染、状态兼容、交互契约、部署配置和消息文案测试。
 - `static/`：陪伴 GIF 与图片素材；`public/`：Service Worker、manifest 与图标；`samples/`：示例导入数据。
 
-## 关于 AI Coding
+## 关于项目
 
-Mini Desk 的开发方式本身就是这个项目最特别的实验：人类只负责想清楚「要什么」，剩下的全部交给 AI。
-
-- 全程对话式开发：886 次提交、迭代至 v1.0.155，约 2.3 万行 TypeScript / Vue / Python 代码由 AI 编写，人类没有手写过一行实现。
-- 1230 个自动化测试同样由 AI 以测试先行（TDD）的方式编写并始终保持通过；每次改动后 AI 会先看测试失败，再写实现。
-- 发布是自动化的：仓库内的自定义发布流程（`.claude/skills/`）驱动 AI 完成构建、全量测试、Cloudflare 部署、GitHub Release 与更新记录整理，一个人维护着 100 个发布版本。
-- 仓库本身是人类与 AI 协作的工件：`CLAUDE.md` 是写给 AI 的项目说明书，`src/state/changelog.ts` 里每个版本的更新记录都由 AI 在发布时归纳。
-
-换句话说，这里描述的所有功能——从四区域工作台到离线使用——都是「说清楚需求 → AI 实现 → AI 自查 → AI 发布」这个循环的产物。
+本仓库基于 Mini Desk 主仓库维护，保留原项目的本地优先工作台，并针对日常工作调整功能和常用应用。后续会按需要合并主仓库更新。
 
 ## 致谢
 
