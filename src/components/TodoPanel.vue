@@ -1673,6 +1673,11 @@ async function copyTodoText(period: TodoPeriod, id: string): Promise<void> {
   await copyTextToClipboard(text);
 }
 
+function pasteTodosFromHeader(): void {
+  const list = effectiveTodoLists.value.find(list => list.id === focusedListId.value) ?? effectiveTodoLists.value[0];
+  if (list) void pasteTodosFromClipboard(list.id);
+}
+
 async function pasteTodosFromClipboard(period: TodoPeriod): Promise<void> {
   const probe = await probeClipboardForTextPaste();
   if (probe.kind !== "text") {
@@ -2122,6 +2127,9 @@ onUnmounted(() => focusRegionAnimation?.cancel());
 
           <div class="todo-heading-actions">
             <span class="todo-count">{{ periodStats[list.id] }}</span>
+            <button type="button" class="todo-paste-button desk-paste-button icon-button"
+              :aria-label="uiText.common.paste" :title="uiText.common.paste"
+              @mousedown.prevent @click.stop="pasteTodosFromClipboard(list.id)"><NIcon :component="ClipboardOutline" /></button>
             <button type="button" class="icon-button" :aria-label="uiText.desk.addReminder" :title="uiText.desk.addReminder"
               @click.stop="handleHeadingAddClick(list)"><NIcon :component="AddOutline" /></button>
             <button

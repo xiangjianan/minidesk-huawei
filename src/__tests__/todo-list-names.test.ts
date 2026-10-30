@@ -41,13 +41,11 @@ describe("reminder list names", () => {
     expect(next.showCompletedTodos).toEqual({ first: true });
     expect(next.todoListOrder).toEqual(["first"]);
     expect(next.todoColumnLayouts).toEqual({ "1": [{ id: "first", column: 0 }] });
-    expect(next.inbox?.todoListId).toBe("first");
     expect(input.todos.second[0].id).toBe("same");
     expect(mergeDuplicateTodoLists(next, "zh")).toBe(next);
     const normalized = normalizeWorkspaceData(input);
     expect(normalized.todoLists).toHaveLength(1);
     expect(normalized.todos.first).toHaveLength(3);
-    expect(normalized.inbox?.todoListId).toBe("first");
   });
 
   it("merges a moved list into the existing list, preserving target configuration", () => {

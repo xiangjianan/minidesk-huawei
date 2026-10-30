@@ -1737,7 +1737,6 @@ describe("QuickButtons", () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "tag-a", title: "工作" }],
       buttons: [{ id: "a1", title: "GitHub", value: "https://github.com", type: "link", hidden: false, tagId: "tag-a" }],
-      polish,
     });
     await wrapper.vm.$nextTick();
 
@@ -1756,7 +1755,7 @@ describe("QuickButtons", () => {
   });
 
   it("顶部菜单不提供粘贴，列表菜单保留普通和智能粘贴", async () => {
-    const wrapper = mountQuickButtons({ polish: vi.fn(), tags: [{ id: "work", title: "工作" }] });
+    const wrapper = mountQuickButtons({ tags: [{ id: "work", title: "工作" }] });
     expect(wrapper.find(".header-actions .desk-paste-button").exists()).toBe(false);
     expect(wrapper.get(".quick-add-button").attributes("aria-label")).toBe("新建列表");
     await wrapper.get(".quick-menu-button").trigger("click");
@@ -1764,7 +1763,7 @@ describe("QuickButtons", () => {
     expect(wrapper.find('.dropdown-option[data-key="smart-paste"]').exists()).toBe(false);
     await wrapper.get(".quick-tag-menu-button").trigger("click");
     expect(wrapper.find('.dropdown-option[data-key="paste"]').exists()).toBe(true);
-    expect(wrapper.find('.dropdown-option[data-key="smart-paste"]').exists()).toBe(true);
+    expect(wrapper.find('.dropdown-option[data-key="smart-paste"]').exists()).toBe(false);
     const listKeys = wrapper.findAll(".dropdown-option").map(option => option.attributes("data-key"));
     await wrapper.get(".quick-tag-heading").trigger("contextmenu");
     expect(wrapper.findAll(".dropdown-option").map(option => option.attributes("data-key"))).toEqual(listKeys);
