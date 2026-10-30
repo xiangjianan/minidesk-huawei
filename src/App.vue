@@ -310,6 +310,8 @@ type DensityArea = {
 
 const GUIDE_MESSAGE_DURATION_MS = 5000;
 const SUGGEST_ISSUE_URL = "https://github.com/xiangjianan/minidesk-huawei/issues/new";
+const GITHUB_REPO_URL = "https://github.com/xiangjianan/minidesk-huawei";
+const GITHUB_REPO_LABEL = "xiangjianan / minidesk-huawei";
 const ABOUT_MESSAGE_DURATION_MS = 10000;
 const activeGuideKey = ref<GuideKey | null>(null);
 /** GIF 点击 Tips 的轮换状态：换指南区域从头开始，同区域逐条前进。 */
@@ -2917,7 +2919,7 @@ function about(anchor?: HTMLElement): void {
     [`${uiText.value.app.aboutTitle} ${uiText.value.app.aboutSignature}`, uiText.value.app.aboutDescription].join("\n"),
     anchor,
     // 「关于」是设置菜单里的显式请求：explicit 穿透「不显示」安静模式照常弹出。
-    { hideCompanionAfter: true, explicit: true },
+    { hideCompanionAfter: true, explicit: true, linkText: GITHUB_REPO_LABEL, linkHref: GITHUB_REPO_URL },
     ABOUT_MESSAGE_DURATION_MS,
   );
 }

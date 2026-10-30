@@ -944,6 +944,10 @@ describe("Naive UI component usage", () => {
     expect(app).toContain("function about");
     expect(app).toContain("aboutTitle");
     expect(app).toContain("aboutDescription");
+    expect(app).toContain("GITHUB_REPO_LABEL");
+    expect(app).toContain("GITHUB_REPO_URL");
+    expect(app).toContain("xiangjianan / minidesk-huawei");
+    expect(app).toContain("https://github.com/xiangjianan/minidesk-huawei");
     expect(app).not.toContain("xiangjianan / todolist");
     expect(app).not.toContain("https://github.com/xiangjianan/todolist");
     expect(app).not.toContain("云霞 · 产品");
