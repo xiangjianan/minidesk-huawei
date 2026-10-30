@@ -2,6 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mountApp } from "./helpers/mount-app";
 import SpacePanel from "../components/SpacePanel.vue";
+import "../components/SupportAuthor.vue";
 import { defaultState, STORAGE_KEY } from "../state/defaults";
 import { loadState, getSerializableState } from "../state/storage";
 
