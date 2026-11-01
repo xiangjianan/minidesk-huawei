@@ -1,134 +1,16 @@
 ---
 name: release-mini-desk
-description: Publish a Mini Desk project release. Use when the user asks to bump the project version, ship current repository changes to GitHub, deploy the built app to Cloudflare Pages, and create a GitHub release with the generated dist package attached. Any pending uncommitted work is first committed with an intelligently generated message and pushed to main; only then is the separate version-bump commit created, after which the normal release flow continues.
+description: 为 minidesk-huawei 自动升级版本、构建 dist 压缩包并发布 GitHub Release。用于用户要求发布此定制版的新版本时。
 ---
 
-# Release Mini Desk
+# 发布 Mini Desk 定制版
 
-Use this workflow for this repository.
+目标是 `/Users/xiangjianan/github/minidesk-huawei` 及其 `origin` GitHub 仓库。调用本技能表示用户要求发布；执行前读取该仓库的 `AGENTS.md`，检查当前分支、工作区、远程地址和实际仓库，避免误发布到上游。不得部署网站或修改上游仓库。
 
-There are **two distinct commits** in every release that has pending work:
+1. 获取 `origin` 的最新 main 和标签。仅以目标 GitHub 仓库的正式版本标签确定最新版本，不把本地缓存的上游标签、预发布标签或其他仓库的标签混入。按数值比较 `X.Y.Z` 版本，允许可选的 `v` 前缀；在最新正式版本的补丁号上加一，例如 `1.1.19` → `1.1.20`。沿用目标仓库现有标签格式；当前定制仓库使用不带 `v` 的版本号。如果没有可辨认的版本、同一版本存在冲突标签、目标标签或 Release 已存在，停下说明，不要覆盖或强推。
+2. 确保准备发布的 `main` 与 `origin/main` 没有未处理的远程提交，且工作区没有无关的未提交改动或未完成的合并。不可用 stash、reset、强推或覆盖来消除分叉或用户改动；无法安全继续时说明。
+3. 检查并同步项目中实际使用的版本字段，包括 `package.json`、`package-lock.json`、`index.html` 和 `src/state/version.ts`，以及 `src/state/changelog.ts` 的版本与双语用户可见更新记录。根据上次发布以来的真实差异编写精简说明；不要虚构功能。如果代码已是目标版本就保留；如果版本高于目标版本或其他状态存在歧义，不要降级，停下说明。将必要版本变更提交到 main。
+4. 对准备发布的确切提交运行适当的测试和 `npm run build`；必须在必要检查通过后发布。构建产物不要提交到 Git。打包为 `dist.<版本号>.tar.gz`，例如 `dist.1.1.20.tar.gz`，压缩包顶层必须是 `dist/`，里面是构建输出（例如 `dist/index.html` 和 `dist/assets/`）。可在仓库根目录用 `tar -czf <包路径> dist`，在临时目录保存包，检查压缩包列表及完整性，确认解压后目录结构和版本一致。
+5. 将发布提交正常推送到目标仓库的 `main`，基于该提交创建并推送对应的新 tag，然后在明确指定的目标仓库创建 GitHub Release，附上编译好的 tar.gz 和基于实际差异的发布说明。使用明确的仓库参数，避免 GitHub CLI 选择 upstream。每个外部步骤后核对结果；如已存在同名资源或操作失败，停止并报告已完成的步骤，不覆盖现有发布资产或标签。GitHub 自动提供的源码包并非上传的附件，无需尝试删除。
 
-1. A **code commit** — describes the actual changes, with a message generated from the diff.
-2. A **release commit** — `release <version>`, containing only the version-bump files.
-
-The code commit is pushed to `main` first; the release commit is created only after that push succeeds.
-
-## Release Workflow
-
-1. Confirm the repository is on `main`.
-   - Run `git status --short --branch`.
-   - If not on `main`, switch only when it will not overwrite work.
-   - Inspect dirty files before staging. Do not discard unrelated user changes.
-
-2. **Commit pending work as its own commit (before any version bump).**
-   - Inspect everything currently uncommitted:
-     ```bash
-     git status --short
-     git diff HEAD
-     ```
-   - If there are pending changes (source, styles, docs, tests, etc.), commit them as a single commit that is **separate from the version bump**:
-     - Generate the commit message **from the actual diff**, never a generic label. Match this repo's history — a conventional prefix plus a concise **Chinese** summary:
-       - `feat:` new feature · `fix:` bug fix · `perf:` performance · `refactor:` · `docs:` · `test:` · `chore:`
-       - Pick the prefix from the dominant change. When several types are mixed, prefer the most significant (`feat:` / `fix:` over `chore:`).
-       - Real examples from this repo: `fix: 移动端主题按钮去除点击 focus 蓝色背景`, `perf: 添加首屏 loading 骨架消除白屏`, `feat: 提醒事项列宽超过阈值自动分多列`.
-       - **Do not** use the `release <version>` message here — that is reserved for step 6.
-     - **Append the changelog entry (before committing):** determine this release's target version now — patch+1 unless the user specified a version; step 4 must reuse the same value. **Curation policy — only significant, user-facing updates belong in the changelog**: new features, and major changes/optimizations users will clearly notice. Do NOT record tiny changes (small style tweaks, minor fixes). If this release contains only trivial changes, do NOT add a new entry — instead bump the existing top entry's `version` (and `date`) to the target version so the changelog's newest version always matches the released app version (`src/__tests__/changelog.test.ts` enforces this). Otherwise insert a new entry at the **top** of `CHANGELOG` in `src/state/changelog.ts`:
-       ```ts
-       {
-         version: "<target version>",
-         date: "<today, YYYY-MM-DD>",
-         notes: { zh: ["…"], en: ["…"] },
-       },
-       ```
-       Write detailed, bulleted notes (both zh and en) derived from this release's actual diff — same source as the commit message, but expanded into one bullet per significant user-facing change. Stage `src/state/changelog.ts` together with the other code changes in this same commit. If (and only if) the working tree was completely clean and no code commit is made, skip this append as well.
-     - Stage intended source and metadata changes only. Do not stage `dist/`, release zips, or other build artifacts.
-     - Commit with the generated message.
-   - If the working tree is clean (no pending changes), skip this step and go straight to step 4.
-
-3. **Push the code commit to `main` before touching the version.**
-   - Push `main` to `origin`:
-     ```bash
-     git push origin main
-     ```
-   - The actual code changes must land on the main branch first, as their own commit, ahead of the version bump. Record this commit hash for the final report.
-
-4. Bump the version in all three places it is hardcoded.
-   - Read the current version.
-   - Use the target version already determined in step 2. If step 2 produced no target version (clean tree, version-only release), use patch+1 unless the user specified a version — and bump the changelog top entry's version to match.
-   - Use `npm version <version> --no-git-tag-version` (updates `package.json` and `package-lock.json`).
-   - Also update the same version string in:
-     - `index.html` → `<meta name="app-version" content="<version>" />`
-     - `src/state/version.ts` → `FALLBACK_APP_VERSION`
-   - All three must match; `src/__tests__/version.test.ts` enforces consistency and will fail the release otherwise.
-
-5. Verify before committing.
-   - Run `npm test` (this includes `version.test.ts`, which fails if the version locations disagree).
-   - Run `npm run build`.
-   - If verification fails, fix the failure before publishing. The code commit from step 2 may already be on `main` — that is expected; fix forward with a new commit rather than rewriting history.
-
-6. **Commit the version bump and push.**
-   - Stage **only** the version files: `package.json`, `package-lock.json`, `index.html`, `src/state/version.ts`.
-   - Use the release-style commit message `release <version>` (for example `release 1.0.52`).
-   - Push `main` to `origin`:
-     ```bash
-     git push origin main
-     ```
-   - The GitHub release tag in step 9 points at this commit.
-
-7. Build the release package.
-   - Remove or overwrite only the zip for the new version.
-   - Run `npm run build`.
-   - Create `dist-<version>.zip` from the generated `dist/` directory, preserving `dist` as the top-level folder in the archive:
-
-```bash
-rm -f "dist-<version>.zip"
-zip -r "dist-<version>.zip" dist
-```
-
-8. Deploy to Cloudflare Pages.
-   - Prefer the project script:
-
-```bash
-npm run deploy:cloudflare
-```
-
-   - If needed, deploy directly with:
-
-```bash
-npx wrangler pages deploy dist --project-name=todolist
-```
-
-   - Capture the deployment URL from Wrangler output.
-   - Verify the deployed page responds and, when possible, confirm the page exposes the new version.
-
-9. Create the GitHub release.
-   - Tag format: `v<version>`, for example `v1.0.52`.
-   - Use the release commit that was pushed to `main` in step 6.
-   - Attach `dist-<version>.zip`.
-   - Prefer `gh` when available:
-
-```bash
-gh release create "v<version>" "dist-<version>.zip" --title "v<version>" --notes "Release v<version>"
-```
-
-10. Clean up the local release package.
-   - After the GitHub release is created successfully, delete the local `dist-<version>.zip`.
-   - Do not delete `dist/`; it is the current build output and may be useful for local inspection.
-
-```bash
-rm -f "dist-<version>.zip"
-```
-
-11. Final response.
-   - Report the version, **the code commit hash (step 2, if any) and the release commit hash (step 6)**, pushed branch, Cloudflare Pages URL, GitHub release URL, release asset name, and verification commands.
-   - Confirm that the local `dist-<version>.zip` was removed.
-   - Mention any other untracked artifacts left locally.
-
-## Guardrails
-
-- The pending-work commit (step 2) must describe the real changes; never label non-version work as `release <version>`.
-- Never use destructive git commands such as `git reset --hard` or `git checkout --` unless the user explicitly asks. If verification fails after the code commit is pushed, fix forward with a new commit.
-- Do not create a release if the push or deployment failed.
-- Do not create a duplicate tag. If `v<version>` already exists, stop and explain the conflict.
-- Keep release artifacts (`dist/`, zips) out of git unless the repository convention says otherwise.
+完成后核对远程 tag 指向发布提交、Release 和附件名称，报告版本、Release 链接、下载链接、验证结果以及未完成事项。不自动同步上游主仓库；如果用户同时要求同步，先执行同步并验证再发布。

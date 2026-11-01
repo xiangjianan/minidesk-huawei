@@ -1,0 +1,3 @@
+interface:
+  display_name: "Merge Main"
+  short_description: "Merge upstream changes while preserving customizations"
