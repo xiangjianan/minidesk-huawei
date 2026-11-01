@@ -127,11 +127,16 @@ const headerHidden = ref(readStoredHeaderHidden());
 const headerHideButton = ref<HTMLButtonElement | null>(null);
 const headerRevealPosition = ref({ right: "126px", top: "10px" });
 const columnWidths = ref<number[]>([]);
-let visibilityAnimationFrame: number | undefined;
+let visibilityAnimations: Animation[] = [];
+let visibilityOverlays: HTMLElement[] = [];
+let visibilityGeneration = 0;
 
 function stopVisibilityAnimation(): void {
-  if (visibilityAnimationFrame !== undefined) window.cancelAnimationFrame(visibilityAnimationFrame);
-  visibilityAnimationFrame = undefined;
+  visibilityGeneration++;
+  visibilityAnimations.forEach((animation) => animation.cancel());
+  visibilityAnimations = [];
+  visibilityOverlays.forEach((overlay) => overlay.remove());
+  visibilityOverlays = [];
 }
 const gridGap = ref(DEFAULT_GRID_GAP);
 const gridPadding = ref({
@@ -426,8 +431,8 @@ function syncImagePreviewTop(): void {
   document.documentElement.style.setProperty("--image-preview-top", headerHidden.value ? "0px" : `${DEFAULT_IMAGE_PREVIEW_TOP}px`);
 }
 
-function refreshWorkbenchLayout(): void {
-  stopVisibilityAnimation();
+function refreshWorkbenchLayout(preserveVisibilityAnimation = false): void {
+  if (!preserveVisibilityAnimation) stopVisibilityAnimation();
   syncImagePreviewTop();
   const metrics = readGridMetrics();
   if (!metrics) return;
@@ -636,42 +641,69 @@ watch(
   },
 );
 
-// When zones are shown/hidden the active column set changes: re-fit the visible
-// zones to the grid width so they redivide the freed space.
+// Capture the old layout before Vue removes a hidden zone. The departing
+// zone remains as an inert visual copy while the real columns move into place.
 watch(
   [activeIndices, () => props.workspaceId],
   ([indices, workspaceId], [previousIndices, previousWorkspaceId]) => {
-    const previousWidths = [...columnWidths.value];
     stopVisibilityAnimation();
     if (workspaceId !== previousWorkspaceId) return;
-    void nextTick(() => {
-      if (props.workspaceId !== workspaceId) return;
-      refreshWorkbenchLayout();
-      const targetWidths = [...columnWidths.value];
-      if (window.innerWidth <= DESKTOP_RESIZE_BREAKPOINT
-        || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-        || previousWidths.length !== previousIndices.length
-        || targetWidths.length !== indices.length || !indices.length) return;
-
-      // Keep surviving zones at their current widths, then reflow the real
-      // columns each frame so text, dividers and the preview move together.
-      const startWidths = indices.map((index, position) => {
-        const previousPosition = previousIndices.indexOf(index);
-        return previousPosition >= 0 ? previousWidths[previousPosition] : targetWidths[position];
+    const grid = gridRef.value;
+    const animate = grid && window.innerWidth > DESKTOP_RESIZE_BREAKPOINT
+      && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+      && typeof Element.prototype.animate === "function";
+    const names = ["assets", "notes", "tasks", "workspace"];
+    const oldRects = new Map<number, DOMRect>();
+    if (animate) {
+      const gridRect = grid.getBoundingClientRect();
+      previousIndices.forEach((index) => {
+        const zone = grid.querySelector<HTMLElement>(`.workbench-zone-${names[index]}`);
+        if (!zone) return;
+        const rect = zone.getBoundingClientRect();
+        oldRects.set(index, rect);
+        if (!indices.includes(index) && rect.width > 0) {
+          const copy = zone.cloneNode(true) as HTMLElement;
+          copy.setAttribute("aria-hidden", "true");
+          copy.inert = true;
+          Object.assign(copy.style, {
+            position: "absolute", left: `${rect.left - gridRect.left}px`,
+            top: `${rect.top - gridRect.top}px`, width: `${rect.width}px`,
+            height: `${rect.height}px`, margin: "0", pointerEvents: "none", zIndex: "4",
+          });
+          grid.appendChild(copy);
+          visibilityOverlays.push(copy);
+        }
       });
-      columnWidths.value = startWidths;
-      const startedAt = performance.now();
-      const step = (now: number) => {
-        const progress = Math.min(1, Math.max(0, (now - startedAt) / 240));
-        const eased = 1 - (1 - progress) ** 3;
-        columnWidths.value = targetWidths.map((target, index) =>
-          startWidths[index] + (target - startWidths[index]) * eased);
-        syncImagePreviewLeft();
-        visibilityAnimationFrame = progress < 1 ? window.requestAnimationFrame(step) : undefined;
-      };
-      visibilityAnimationFrame = window.requestAnimationFrame(step);
+    }
+    const generation = visibilityGeneration;
+    void nextTick(async () => {
+      if (props.workspaceId !== workspaceId || generation !== visibilityGeneration) return;
+      refreshWorkbenchLayout(true);
+      await nextTick();
+      if (!animate || generation !== visibilityGeneration) return;
+      const options: KeyframeAnimationOptions = { duration: 280, easing: "cubic-bezier(0.22, 1, 0.36, 1)" };
+      indices.forEach((index) => {
+        const zone = grid.querySelector<HTMLElement>(`.workbench-zone-${names[index]}`);
+        if (!zone) return;
+        const rect = zone.getBoundingClientRect();
+        const old = oldRects.get(index);
+        if (rect.width <= 0) return;
+        const frames = old
+          ? [{ transformOrigin: "left center", transform: `translateX(${old.left - rect.left}px) scaleX(${old.width / rect.width})` }, { transformOrigin: "left center", transform: "translateX(0) scaleX(1)" }]
+          : [{ opacity: 0, transformOrigin: "center", transform: "scaleX(0.08)" }, { opacity: 1, transformOrigin: "center", transform: "scaleX(1)" }];
+        visibilityAnimations.push(zone.animate(frames, options));
+      });
+      visibilityOverlays.forEach((copy) => {
+        const animation = copy.animate([
+          { opacity: 1, transform: "scaleX(1)", transformOrigin: "center" },
+          { opacity: 0, transform: "scaleX(0.08)", transformOrigin: "center" },
+        ], options);
+        visibilityAnimations.push(animation);
+        animation.onfinish = () => { copy.remove(); visibilityOverlays = visibilityOverlays.filter((item) => item !== copy); };
+      });
     });
   },
+  { flush: "pre" },
 );
 
 // 切换工作区时区域尺寸跟着换：丢弃当前列宽，让布局按新工作区的存储宽度
@@ -685,6 +717,8 @@ watch(
     void nextTick(refreshWorkbenchLayout);
   },
 );
+
+function handleWindowResize(): void { refreshWorkbenchLayout(); }
 
 let disposeScrollActivity: (() => void) | undefined;
 
@@ -705,7 +739,7 @@ onMounted(() => {
     gridResizeObserver.observe(gridRef.value);
   }
   void nextTick(refreshWorkbenchLayout);
-  window.addEventListener("resize", refreshWorkbenchLayout);
+  window.addEventListener("resize", handleWindowResize);
 });
 
 onUnmounted(() => {
@@ -715,7 +749,7 @@ onUnmounted(() => {
   gridResizeObserver?.disconnect();
   if (gridResizeFrame !== undefined) window.cancelAnimationFrame(gridResizeFrame);
   finishResize();
-  window.removeEventListener("resize", refreshWorkbenchLayout);
+  window.removeEventListener("resize", handleWindowResize);
   document.documentElement.style.removeProperty("--image-preview-left");
   document.documentElement.style.removeProperty("--image-preview-top");
 });

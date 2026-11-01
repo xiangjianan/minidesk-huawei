@@ -34,6 +34,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.22",
+      date: "2026-11-01",
+      notes: {
+        zh: ["优化：工作台区域显示和隐藏时的过渡动画", "优化：快捷动作右键菜单支持在所在列表新建和粘贴"],
+        en: ["Improved: transitions when showing or hiding workbench zones", "Improved: create and paste into the current list from a quick action menu"],
+      },
+    },
+    {
       version: "1.1.21",
       date: "2026-11-01",
       notes: {

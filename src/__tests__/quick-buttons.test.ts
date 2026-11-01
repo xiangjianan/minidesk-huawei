@@ -1532,7 +1532,7 @@ describe("QuickButtons", () => {
 
     await wrapper.get(".quick-button").trigger("contextmenu");
 
-    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制标题", "复制链接", "编辑", "设为隐藏", "删除"]);
+    expect(wrapper.findAll(".dropdown-option").map((option) => option.text())).toEqual(["复制标题", "复制链接", "新建", "粘贴", "编辑", "设为隐藏", "删除"]);
 
     await wrapper.findAll(".dropdown-option").find((option) => option.text() === "复制链接")?.trigger("click");
 
@@ -1794,6 +1794,24 @@ describe("QuickButtons", () => {
     await wrapper.get(".quick-tag-content").trigger("contextmenu");
     expect(wrapper.find('.dropdown-option[data-key="smart-paste"]').exists()).toBe(false);
   });
+
+  it("按钮菜单在复制后提供新建和粘贴，并粘贴到按钮所在列表", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "tag-a", title: "工作" }],
+      buttons: [{ id: "a1", title: "App", value: "shortcuts://demo", type: "app", hidden: false, tagId: "tag-a" }],
+    });
+    await wrapper.get(".quick-button").trigger("contextmenu");
+    const keys = wrapper.findAll(".dropdown-option").map((option) => option.attributes("data-key"));
+    expect(keys.slice(keys.indexOf("copy-link"), keys.indexOf("copy-link") + 3)).toEqual(["copy-link", "add", "paste"]);
+    expect(keys).not.toContain("smart-paste");
+    Object.assign(navigator, { clipboard: { readText: vi.fn(async () => "https://github.com") } });
+    await wrapper.get('[data-key="paste"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.emitted("save")?.[0]?.[0]).toEqual({ title: "github.com", value: "https://github.com", type: "link", tagTitle: "工作" });
+    wrapper.unmount();
+  });
+
+
 });
 
 describe("formatQuickCopiedPreview", () => {

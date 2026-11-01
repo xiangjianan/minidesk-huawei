@@ -889,38 +889,18 @@ describe("WorkbenchShell", () => {
     wrapper.unmount();
   });
 
-  it("animates surviving column widths when zones are hidden and shown", async () => {
+  it("updates the grid when zones are hidden and shown", async () => {
     mockWideGridMetrics();
-    let frame: FrameRequestCallback | undefined;
-    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
-      frame = callback;
-      return 1;
-    });
-    const cancel = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
-    vi.spyOn(performance, "now").mockReturnValue(0);
     const wrapper = mount(WorkbenchShell, { props: defaultProps });
     await nextTick(); await nextTick();
-    const initial = Number.parseFloat(readColumnTracks(wrapper)[0]);
     await wrapper.setProps({ zoneVisibility: { assets: true, notes: true, tasks: false, workspace: true } });
     await nextTick(); await nextTick();
-    expect(Number.parseFloat(readColumnTracks(wrapper)[0])).toBe(initial);
-    frame!(120);
-    await nextTick();
-    const middle = Number.parseFloat(readColumnTracks(wrapper)[0]);
-    expect(middle).toBeGreaterThan(initial);
-    frame!(240);
-    await nextTick();
-    const expanded = Number.parseFloat(readColumnTracks(wrapper)[0]);
-    expect(expanded).toBeGreaterThan(middle);
+    expect(wrapper.find(".workbench-zone-tasks").exists()).toBe(false);
+    expect(readColumnTracks(wrapper)).toHaveLength(3);
     await wrapper.setProps({ zoneVisibility: { assets: true, notes: true, tasks: true, workspace: true } });
     await nextTick(); await nextTick();
-    expect(Number.parseFloat(readColumnTracks(wrapper)[0])).toBe(expanded);
-    frame!(120);
-    await nextTick();
-    expect(Number.parseFloat(readColumnTracks(wrapper)[0])).toBeLessThan(expanded);
-    await wrapper.setProps({ zoneVisibility: { assets: true, notes: false, tasks: true, workspace: true } });
-    await nextTick(); await nextTick();
-    expect(cancel).toHaveBeenCalled();
+    expect(wrapper.find(".workbench-zone-tasks").exists()).toBe(true);
+    expect(readColumnTracks(wrapper)).toHaveLength(4);
     wrapper.unmount();
   });
 

@@ -272,7 +272,7 @@ const areaMenuOptions = computed<DropdownOption[]>(() => [
   { ...guideMenuOption.value, icon: renderIcon(HelpCircleOutline) },
 ]);
 const menuOptions = computed<DropdownOption[]>(() => {
-  if (menu.value?.tagId) {
+  if (menu.value?.tagId && !menu.value.id) {
     const showHidden = props.tags.find(tag => tag.id === menu.value?.tagId)?.showHidden ?? props.showHidden;
     return [
       { label: uiText.value.quick.editList, key: "edit-tag", icon: renderIcon(CreateOutline) },
@@ -303,6 +303,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
           { label: button.type === "text" ? uiText.value.quick.copyContent : button.type === "api" ? uiText.value.quick.copyRequestUrl : button.type === "app" ? uiText.value.quick.copyAppScheme : uiText.value.quick.copyLink, key: "copy-link", icon: renderIcon(CopyOutline) },
         ]
       : []),
+    ...areaMenuOptions.value.filter((option) => ["add", "paste"].includes(String(option.key))),
     ...(moveMenuChildren.value.length > 0
       ? [{
           label: uiText.value.common.moveToWorkspace,
@@ -461,7 +462,8 @@ function openMenu(event: MouseEvent, id: string): void {
   event.preventDefault();
   event.stopPropagation();
   exclusiveMenu.notifyOpen(event, { replacingExistingMenu: Boolean(menu.value) });
-  menu.value = { x: event.clientX, y: event.clientY, id, anchor: event.currentTarget as HTMLElement };
+  const tagId = props.buttons.find((button) => button.id === id)?.tagId;
+  menu.value = { x: event.clientX, y: event.clientY, id, tagId, tagTitle: getQuickTagTitle(tagId), anchor: event.currentTarget as HTMLElement };
 }
 
 function openAreaMenu(event: MouseEvent): void {
@@ -522,8 +524,8 @@ function handleMenuSelect(key: string): void {
   closeMenu();
   if (key.startsWith("move-ws:")) {
     const workspaceId = key.slice("move-ws:".length);
-    if (tagId) emit("moveTagToWorkspace", tagId, workspaceId);
-    else if (id) emit("moveButtonToWorkspace", id, workspaceId);
+    if (id) emit("moveButtonToWorkspace", id, workspaceId);
+    else if (tagId) emit("moveTagToWorkspace", tagId, workspaceId);
     return;
   }
   if (key === "edit-tag" && tagId) {
