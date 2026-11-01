@@ -2925,7 +2925,9 @@ function about(anchor?: HTMLElement): void {
 }
 
 function suggestIssue(): void {
-  window.open(SUGGEST_ISSUE_URL, "_blank", "noopener,noreferrer");
+  const url = new URL(SUGGEST_ISSUE_URL);
+  url.searchParams.set("body", uiText.value.app.suggestIssueBody);
+  window.open(url.toString(), "_blank", "noopener,noreferrer");
 }
 
 function handleGlobalKeydown(event: KeyboardEvent): void {

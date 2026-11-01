@@ -8264,11 +8264,12 @@ describe("App shell", () => {
     settings.vm.$emit("suggest", settings.element as HTMLElement);
     await wrapper.vm.$nextTick();
 
-    expect(openSpy).toHaveBeenCalledWith(
-      "https://github.com/xiangjianan/minidesk-huawei/issues/new",
-      "_blank",
-      "noopener,noreferrer",
-    );
+    const [url, target, features] = openSpy.mock.calls[0];
+    const issueUrl = new URL(url as string);
+    expect(`${issueUrl.origin}${issueUrl.pathname}`).toBe("https://github.com/xiangjianan/minidesk-huawei/issues/new");
+    expect(issueUrl.searchParams.get("body")).toBe("感谢使用 MiniDesk！写下你的建议，我们会认真看每一条反馈 🌟\n\n【你的场景】在什么情况下，你想做的事不太顺手？\n\n【期望效果】你希望怎样更好用？\n\n【具体想法（选填）】如果有了主意，描述一下你设想的样子。\n\n——\n版本 / 设备（选填）：");
+    expect(target).toBe("_blank");
+    expect(features).toBe("noopener,noreferrer");
 
     wrapper.unmount();
   });
