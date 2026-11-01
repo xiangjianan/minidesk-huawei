@@ -38,14 +38,16 @@ export const CHANGELOG: ChangelogEntry[] = [
       date: "2026-11-01",
       notes: {
         zh: [
-          "改版：快捷动作区改为持久分组，纯文字紧凑胶囊样式，分组可自定义颜色",
-          "优化：面板菜单与各区右键菜单统一整理，列表拖拽预览完整还原原样式",
-          "新增：粘贴条目闪烁高亮反馈与顶栏随机工作台小贴士",
+          "优化：调整图片预览工具栏的布局、分组和亮色样式",
+          "优化：列表菜单新增创建操作，调整创建与粘贴按钮顺序",
+          "修复：记事本标签重命名时的文字裁切、滚动和光标显示",
+          "优化：反馈 Issue 自动填入模板内容",
         ],
         en: [
-          "Redesigned: quick actions as persistent groups with compact text-only pills and custom colors",
-          "Improved: panel and context menus unified; list drag previews faithfully match the original styling",
-          "New: flash highlight on pasted items and random workbench tips in the header menu",
+          "Improved: image preview toolbar layout, grouping, and light theme styling",
+          "Improved: added create actions to list menus and reordered create and paste buttons",
+          "Fixed: notebook tab rename text clipping, scrolling, and caret display",
+          "Improved: feedback issues are prefilled with the template",
         ],
       },
     },
