@@ -265,7 +265,7 @@ const moveMenuChildren = computed<DropdownOption[]>(() =>
 );
 const areaMenuOptions = computed<DropdownOption[]>(() => [
   { label: uiText.value.quick.newList, key: "create-list", icon: renderIcon(AddOutline) },
-  { label: uiText.value.quick.add, key: "add", icon: renderIcon(AddOutline) },
+  { label: uiText.value.common.create, key: "add", icon: renderIcon(AddOutline) },
   { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
   { label: props.showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(props.showHidden ? EyeOffOutline : EyeOutline) },
   { label: props.compact ? uiText.value.quick.largeButtons : uiText.value.quick.compactButtons, key: "toggle-compact", icon: renderIcon(ResizeOutline) },
@@ -277,7 +277,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     return [
       { label: uiText.value.quick.editList, key: "edit-tag", icon: renderIcon(CreateOutline) },
       { label: showHidden ? uiText.value.quick.hideHidden : uiText.value.quick.showHidden, key: "toggle-show-hidden", icon: renderIcon(showHidden ? EyeOffOutline : EyeOutline) },
-      ...areaMenuOptions.value.filter((option) => ["paste"].includes(String(option.key))),
+      ...areaMenuOptions.value.filter((option) => ["add", "paste"].includes(String(option.key))),
       ...(moveMenuChildren.value.length > 0
         ? [{
             label: uiText.value.common.moveToWorkspace,
@@ -934,22 +934,27 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
             <span v-else class="quick-tag-title">{{ group.title }}</span>
 
             <span v-if="editingTagId !== group.id" class="quick-tag-count">{{ group.buttons.length }}</span>
-
-            <button v-if="group.title && editingTagId !== group.id" type="button" class="quick-tag-paste-button desk-paste-button icon-button"
-              :aria-label="uiText.common.paste" :title="uiText.common.paste"
-              @click.stop="pasteQuick(isRealTagGroup(group.id) ? group.title : '')" @dblclick.stop>
-              <NIcon :component="ClipboardOutline" />
-            </button>
             <button
               v-if="group.title && editingTagId !== group.id"
               type="button"
               class="quick-tag-add-button"
               :aria-label="uiText.quick.addInTag"
-              :title="uiText.quick.addInTag"
+              :title="uiText.common.create"
               @click.stop="openAdd($event.currentTarget as HTMLElement, isRealTagGroup(group.id) ? group.title : '', group.id)"
               @dblclick.stop
             >
               <NIcon :component="AddOutline" />
+            </button>
+            <button
+              v-if="group.title && editingTagId !== group.id"
+              type="button"
+              class="icon-button desk-paste-button"
+              :aria-label="uiText.common.paste"
+              :title="uiText.common.paste"
+              @click.stop="pasteQuick(isRealTagGroup(group.id) ? group.title : '')"
+              @dblclick.stop
+            >
+              <NIcon :component="ClipboardOutline" />
             </button>
             <button
               v-if="group.title && editingTagId !== group.id"

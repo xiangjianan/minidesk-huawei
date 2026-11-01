@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { NIcon } from "naive-ui";
-import { AddOutline, ChevronDownOutline, ChevronUpOutline, CloseOutline, CreateOutline, RemoveOutline, TrashOutline } from "@vicons/ionicons5";
+import { ChevronDownOutline, ChevronUpOutline, CloseOutline, CreateOutline, TrashOutline } from "@vicons/ionicons5";
+import { ZoomIn, ZoomOut } from "lucide-vue-next";
 import { getUiText } from "../state/i18n";
 import { ZOOM_STEP } from "../composables/useImageTransform";
 import type { AppLanguage } from "../types";
@@ -17,7 +18,44 @@ const uiText = computed(() => getUiText(props.language));
 </script>
 
 <template>
-  <div class="preview-actions" role="toolbar" :aria-label="uiText.preview.help">
+  <div class="preview-actions image-preview-actions" role="toolbar" aria-orientation="vertical" :aria-label="uiText.preview.help">
+    <div class="preview-toolbar-group">
+    <button
+      type="button"
+      class="preview-toolbar-button is-close"
+      :aria-label="uiText.preview.close"
+      @click.stop.prevent="emit('close')"
+      @keydown.enter.stop.prevent="emit('close')"
+      @keydown.space.stop.prevent="emit('close')"
+    >
+      <NIcon size="18">
+        <CloseOutline />
+      </NIcon>
+    </button>
+    <div class="preview-toolbar-divider" role="separator" aria-orientation="horizontal"></div>
+    <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-in" :aria-label="uiText.preview.zoomIn" @click.stop.prevent="emit('zoom', ZOOM_STEP)">
+      <NIcon size="18">
+        <ZoomIn />
+      </NIcon>
+    </button>
+    <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-out" :aria-label="uiText.preview.zoomOut" @click.stop.prevent="emit('zoom', -ZOOM_STEP)">
+      <NIcon size="18">
+        <ZoomOut />
+      </NIcon>
+    </button>
+    <div class="preview-toolbar-divider" role="separator" aria-orientation="horizontal"></div>
+    <button v-if="canEdit" type="button" class="preview-toolbar-button is-edit" :aria-label="uiText.common.edit" @click.stop.prevent="emit('edit')">
+      <NIcon size="18">
+        <CreateOutline />
+      </NIcon>
+    </button>
+    <button type="button" class="preview-toolbar-button is-delete" :aria-label="uiText.common.delete" @click.stop.prevent="emit('delete', $event)">
+      <NIcon size="18">
+        <TrashOutline />
+      </NIcon>
+    </button>
+    </div>
+    <div class="preview-toolbar-group">
     <button
       type="button"
       class="preview-toolbar-button preview-nav-button is-previous"
@@ -46,37 +84,6 @@ const uiText = computed(() => getUiText(props.language));
         <ChevronDownOutline />
       </NIcon>
     </button>
-    <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-out" :aria-label="uiText.preview.zoomOut" @click.stop.prevent="emit('zoom', -ZOOM_STEP)">
-      <NIcon size="18">
-        <RemoveOutline />
-      </NIcon>
-    </button>
-    <button type="button" class="preview-toolbar-button preview-zoom-button is-zoom-in" :aria-label="uiText.preview.zoomIn" @click.stop.prevent="emit('zoom', ZOOM_STEP)">
-      <NIcon size="18">
-        <AddOutline />
-      </NIcon>
-    </button>
-    <button v-if="canEdit" type="button" class="preview-toolbar-button is-edit" :aria-label="uiText.common.edit" @click.stop.prevent="emit('edit')">
-      <NIcon size="18">
-        <CreateOutline />
-      </NIcon>
-    </button>
-    <button type="button" class="preview-toolbar-button is-delete" :aria-label="uiText.common.delete" @click.stop.prevent="emit('delete', $event)">
-      <NIcon size="18">
-        <TrashOutline />
-      </NIcon>
-    </button>
-    <button
-      type="button"
-      class="preview-toolbar-button is-close"
-      :aria-label="uiText.preview.close"
-      @click.stop.prevent="emit('close')"
-      @keydown.enter.stop.prevent="emit('close')"
-      @keydown.space.stop.prevent="emit('close')"
-    >
-      <NIcon size="18">
-        <CloseOutline />
-      </NIcon>
-    </button>
+    </div>
   </div>
 </template>

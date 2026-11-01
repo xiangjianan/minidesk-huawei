@@ -324,6 +324,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
     return [
       { label: uiText.value.todo.editList, key: "edit-list", icon: renderIcon(CreateOutline) },
       { label: isCompletedVisible(list.id) ? uiText.value.todo.hideCompleted : uiText.value.todo.showCompleted, key: "toggle-completed", icon: renderIcon(isCompletedVisible(list.id) ? EyeOffOutline : EyeOutline) },
+      { label: uiText.value.common.create, key: "create", icon: renderIcon(AddOutline) },
       { label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) },
       { label: uiText.value.todo.clearCompleted, key: "clear-completed", icon: renderIcon(CheckmarkDoneOutline) },
       ...buildListMoveOptions(),
@@ -1476,6 +1477,12 @@ async function handleMenuSelect(key: string): Promise<void> {
     if (list) await listCreateDialogRef.value?.open(anchor, list);
     return;
   }
+  if (key === "create") {
+    closeMenu();
+    const list = getListById(period);
+    if (list) handleHeadingAddClick(list);
+    return;
+  }
   if (key === "create-list") {
     closeMenu();
     await openCreateListDialog(anchor);
@@ -2129,11 +2136,11 @@ onUnmounted(() => focusRegionAnimation?.cancel());
 
           <div class="todo-heading-actions">
             <span class="todo-count">{{ periodStats[list.id] }}</span>
-            <button type="button" class="todo-paste-button desk-paste-button icon-button"
+            <button type="button" class="icon-button" :aria-label="uiText.desk.addReminder" :title="uiText.common.create"
+              @click.stop="handleHeadingAddClick(list)"><NIcon :component="AddOutline" /></button>
+            <button type="button" class="icon-button desk-paste-button"
               :aria-label="uiText.common.paste" :title="uiText.common.paste"
               @mousedown.prevent @click.stop="pasteTodosFromClipboard(list.id)"><NIcon :component="ClipboardOutline" /></button>
-            <button type="button" class="icon-button" :aria-label="uiText.desk.addReminder" :title="uiText.desk.addReminder"
-              @click.stop="handleHeadingAddClick(list)"><NIcon :component="AddOutline" /></button>
             <button
               type="button"
               class="todo-section-menu-button icon-button"
@@ -2292,7 +2299,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
             type="button"
             class="todo-add-row"
             :aria-label="uiText.todo.addItem"
-            :title="uiText.todo.addItem"
+            :title="uiText.common.create"
             @click.stop="handleHeadingAddClick(list)"
           >
             <NIcon :component="AddOutline" />
