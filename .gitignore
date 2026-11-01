@@ -11,5 +11,9 @@ outputs/
 dist-*.zip
 
 # HyperFrames skill suite mirrors (canonical copy: ~/.claude/skills, via `npx hyperframes skills update`)
-.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/merge-main/
+!.agents/skills/release-mini-desk/
 skills-lock.json
