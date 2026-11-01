@@ -125,10 +125,20 @@ function startTabEdit(id: string, sourceElement?: HTMLElement): void {
   editingSpaceId.value = id;
   editingTitle.value = space.title;
   editingMeasureTitle.value = space.title;
-  nextTick(() => {
+  nextTick(async () => {
     const input = document.querySelector<HTMLInputElement>(".space-tab-edit-input");
-    input?.focus({ preventScroll: true });
-    if (input) setStickySelection(input, input.value.length, input.value.length);
+    if (!input) return;
+    const overflow = input.scrollWidth - input.clientWidth;
+    if (overflow > 0) {
+      const shellWidth = input.parentElement?.getBoundingClientRect().width ?? 0;
+      if (shellWidth > 0) {
+        editingTabWidth.value = Math.min(180, shellWidth + overflow + 6);
+        await nextTick();
+      }
+    }
+    if (editingSpaceId.value !== id || !input.isConnected) return;
+    input.focus({ preventScroll: true });
+    setStickySelection(input, input.value.length, input.value.length);
   });
 }
 

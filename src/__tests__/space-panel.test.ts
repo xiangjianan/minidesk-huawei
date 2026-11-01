@@ -124,6 +124,23 @@ describe("SpacePanel", () => {
     expect(wrapper.emitted("rename")?.[0]).toEqual(["workspace", "资料"]);
   });
 
+  it("reveals the caret at the end of a long tab name when editing starts", async () => {
+    const title = "一个很长很长的记事本标签名称需要滚动才能看到末尾";
+    const wrapper = mount(SpacePanel, {
+      attachTo: document.body,
+      props: { spaces: [{ id: "workspace", title, lines: [] }], activeSpaceId: "workspace" },
+    });
+    try {
+      await wrapper.get(".space-tab").trigger("dblclick");
+      await wrapper.vm.$nextTick();
+      const input = wrapper.get(".space-tab-edit-input").element as HTMLInputElement;
+      expect(input.selectionStart).toBe(title.length);
+      expect(input.selectionEnd).toBe(title.length);
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("cancels tab renaming before switching tabs can blur and commit the draft", async () => {
     const wrapper = mountSpacePanel([
       { id: "workspace", title: "工作空间", lines: [] },
@@ -453,6 +470,9 @@ describe("SpacePanel", () => {
     expect(shellRule).toContain("min-width: 84px");
     expect(shellRule).toContain("max-width: 180px");
     expect(shellRule).toContain("display: grid");
+    expect(shellRule).toContain("grid-template-columns: minmax(0, 1fr)");
+    const sharedEditRule = ruleBodies(styles, ".space-tab-edit-measure").find((body) => body.includes("grid-area: 1 / 1"));
+    expect(sharedEditRule).toContain("box-sizing: border-box");
     expect(measureRule).toContain("visibility: hidden");
     expect(measureRule).toContain("white-space: pre");
     expect(inputRule).toContain("position: absolute");
