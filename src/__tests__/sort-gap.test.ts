@@ -79,6 +79,27 @@ describe('sorting landing gap', () => {
     expect(gap.indexTarget()).toBe(items[0]);
     gap.restore();
   });
+  it('accepts blank space beside a single quick button and animates group height changes', () => {
+    const root = document.body.appendChild(document.createElement('div'));
+    root.innerHTML = '<section class="quick-tag-group"><div class="quick-buttons"><button class="quick-button">A</button></div></section><section class="quick-tag-group"><div class="quick-buttons"><button class="quick-button">B</button></div></section>';
+    const groups = Array.from(root.querySelectorAll<HTMLElement>('.quick-tag-group'));
+    const buttons = Array.from(root.querySelectorAll<HTMLElement>('.quick-button'));
+    const destination = groups[1]!.querySelector<HTMLElement>('.quick-buttons')!;
+    buttons.forEach((button, index) => vi.spyOn(button, 'getBoundingClientRect').mockReturnValue({ left: 0, right: 50, top: index * 100, bottom: index * 100 + 40, width: 50, height: 40 } as DOMRect));
+    groups.forEach(group => {
+      vi.spyOn(group, 'getBoundingClientRect').mockImplementation(() => ({ height: group.querySelector('.sort-gap') ? 80 : 40 } as DOMRect));
+      group.animate = vi.fn(() => ({ cancel: vi.fn() }) as unknown as Animation);
+    });
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => destination });
+    const gap = createSortGap(buttons[0]!, '.quick-button');
+    gap.update(root, 90, 120);
+    expect(buttons[1]!.nextElementSibling?.className).toBe('sort-gap');
+    expect(gap.anchor).toBe(buttons[1]);
+    expect(groups[0]!.animate).toHaveBeenCalled();
+    expect(groups[1]!.animate).toHaveBeenCalled();
+    gap.restore();
+  });
+
   it('previews an empty destination and restores without changing either list', () => {
     const { root, items, pointTo } = fixture();
     items.forEach(el => el.className = 'todo-item');

@@ -34,6 +34,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.23",
+      date: "2026-11-02",
+      notes: {
+        zh: [
+          "优化：拖拽排序跨分组移动时分组高度平滑过渡",
+          "修复：快捷按钮旁的空白处可作为拖拽落位点",
+        ],
+        en: [
+          "Improved: group heights animate smoothly while drag sorting across groups",
+          "Fixed: blank space beside a quick button now works as a drop target",
+        ],
+      },
+    },
+    {
       version: "1.1.22",
       date: "2026-11-01",
       notes: {

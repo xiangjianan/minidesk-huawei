@@ -20,6 +20,26 @@ export function createSortGap(source: HTMLElement, selector: string) {
     collapsedTarget = null;
   }
   const animations = new Map<HTMLElement, Animation>();
+  const heightAnimations = new Map<HTMLElement, Animation>();
+  function moveGap(move: () => void, destination: HTMLElement) {
+    const groupSelector = selector === '.quick-button' ? '.quick-tag-group' : selector === '.todo-item' ? '.todo-section' : '';
+    const groups = groupSelector ? Array.from(new Set([gap.parentElement?.closest<HTMLElement>(groupSelector), destination.closest<HTMLElement>(groupSelector)].filter((el): el is HTMLElement => Boolean(el)))) : [];
+    const heights = groups.map(group => group.getBoundingClientRect().height);
+    groups.forEach(group => { heightAnimations.get(group)?.cancel(); heightAnimations.delete(group); });
+    move();
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    groups.forEach((group, index) => {
+      const height = group.getBoundingClientRect().height;
+      if (height === heights[index] || !group.animate || reducedMotion) return;
+      const animation = group.animate([
+        { height: `${heights[index]}px`, boxSizing: 'border-box' },
+        { height: `${height}px`, boxSizing: 'border-box' },
+      ], { duration: 180, easing: 'ease-out' });
+      heightAnimations.set(group, animation);
+      const finish = () => { if (heightAnimations.get(group) === animation) heightAnimations.delete(group); };
+      void animation.finished?.then(finish, finish);
+    });
+  }
   function isClippedContent(element: HTMLElement): boolean {
     return Boolean(element.closest('.todo-section.is-collapsed, .todo-list-shell.is-hidden, .quick-tag-content.is-collapsed'));
   }
@@ -76,9 +96,9 @@ export function createSortGap(source: HTMLElement, selector: string) {
       if (destination && !isClippedContent(destination)) {
         const last = Array.from(destination.querySelectorAll<HTMLElement>(selector)).filter(el => el !== source).at(-1);
         if (!last) {
-          destination.append(gap); container = destination; anchor = null;
-        } else if (y > last.getBoundingClientRect().bottom) {
-          last.after(gap); anchor = last; before = false; container = null;
+          moveGap(() => destination.append(gap), destination); container = destination; anchor = null;
+        } else if (selector === '.quick-button' || y > last.getBoundingClientRect().bottom) {
+          moveGap(() => last.after(gap), destination); anchor = last; before = false; container = null;
         }
       }
       return;
@@ -109,7 +129,7 @@ export function createSortGap(source: HTMLElement, selector: string) {
       elements = candidates.filter(element => affected.has(element));
     }
     const positions = elements.map(el => ({ visual: el.getBoundingClientRect(), layout: layoutBounds(el) }));
-    if (before) item.before(gap); else item.after(gap);
+    moveGap(() => { if (before) item.before(gap); else item.after(gap); }, item);
     // Finish all reads before cancellation/animation writes. Interleaving them
     // would force style/layout again for each subsequent row.
     const destinations = elements.map(el => layoutBounds(el));
@@ -137,6 +157,7 @@ export function createSortGap(source: HTMLElement, selector: string) {
     if (source.parentElement !== parent || source.nextSibling !== next) parent.insertBefore(source, next?.parentNode === parent ? next : null);
     source.style.display = display;
     animations.forEach(animation => animation.cancel());
+    heightAnimations.forEach(animation => animation.cancel());
   }
   function indexTarget(): HTMLElement | null {
     if (!anchor) return null;
