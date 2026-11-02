@@ -34,6 +34,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.24",
+      date: "2026-11-02",
+      notes: {
+        zh: ["优化：快捷动作拖拽落点更贴近指针", "修复：提醒事项跨列表拖拽闪烁及空列表落点对齐"],
+        en: ["Improved: quick action drop slots stay closer to the pointer", "Fixed: reminder flicker during cross-list drag and drop-slot alignment in empty lists"],
+      },
+    },
+    {
       version: "1.1.23",
       date: "2026-11-02",
       notes: {

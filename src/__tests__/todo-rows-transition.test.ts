@@ -169,10 +169,13 @@ it("does not pin or animate list height when a drag commits into its reserved ga
   const hooks = createTodoLeaveHooks();
   hooks.beforeUpdate(list);
   hooks.onBeforeLeave(row);
+  expect(row.style.visibility).toBe("hidden");
   height = 50;
   hooks.afterUpdate(list);
   expect(list.style.height).toBe("");
   expect(list.style.minHeight).toBe("");
   expect(animate).not.toHaveBeenCalled();
+  hooks.onLeaveCancelled(row);
+  expect(row.style.visibility).toBe("");
   hooks.dispose();
 });

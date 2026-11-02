@@ -100,6 +100,26 @@ describe('sorting landing gap', () => {
     gap.restore();
   });
 
+  it('keeps the nearby slot when leaving a button for blank space in a multi-row group', () => {
+    const root = document.body.appendChild(document.createElement('div'));
+    root.innerHTML = '<section class="quick-tag-group"><div class="quick-buttons"><button class="quick-button">A</button></div></section><section class="quick-tag-group"><div class="quick-buttons"><button class="quick-button">B</button><button class="quick-button">C</button></div></section>';
+    const buttons = Array.from(root.querySelectorAll<HTMLElement>('.quick-button'));
+    const destination = buttons[1]!.parentElement!;
+    buttons.forEach((button, index) => vi.spyOn(button, 'getBoundingClientRect').mockReturnValue({ left: 20, right: 70, top: index * 100, bottom: index * 100 + 40, width: 50, height: 40 } as DOMRect));
+    let hit: Element = buttons[1]!;
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => hit });
+    const gap = createSortGap(buttons[0]!, '.quick-button');
+    gap.update(root, 30, 110);
+    expect(gap.anchor).toBe(buttons[1]);
+    const placeholder = root.querySelector('.sort-gap');
+    expect(placeholder?.nextElementSibling).toBe(buttons[1]);
+    hit = destination;
+    gap.update(root, 10, 110);
+    expect(placeholder?.nextElementSibling).toBe(buttons[1]);
+    expect(gap.anchor).toBe(buttons[1]);
+    gap.restore();
+  });
+
   it('previews an empty destination and restores without changing either list', () => {
     const { root, items, pointTo } = fixture();
     items.forEach(el => el.className = 'todo-item');
@@ -112,6 +132,23 @@ describe('sorting landing gap', () => {
     gap.restore();
     expect(empty.children).toHaveLength(0);
     expect(root.firstElementChild!.textContent).toBe('ABC');
+  });
+
+  it('uses empty and filled list spacing while a sole reminder moves into an empty list', () => {
+    const root = document.body.appendChild(document.createElement('div'));
+    root.innerHTML = '<section class="todo-section"><ul class="todo-list"><li class="todo-item">A</li></ul></section><section class="todo-section"><ul class="todo-list todo-empty-list"><li class="todo-empty-hint"></li></ul></section>';
+    const lists = Array.from(root.querySelectorAll<HTMLElement>('.todo-list'));
+    const row = root.querySelector<HTMLElement>('.todo-item')!;
+    vi.spyOn(row, 'getBoundingClientRect').mockReturnValue({ left: 8, right: 108, top: 0, bottom: 34, width: 100, height: 34 } as DOMRect);
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => lists[1] });
+    const gap = createSortGap(row, '.todo-item');
+    gap.update(root, 30, 100);
+    expect(lists[0]!.classList.contains('is-sort-preview-empty')).toBe(true);
+    expect(lists[1]!.classList.contains('is-sort-preview-filled')).toBe(true);
+    expect(lists[1]!.querySelector<HTMLElement>('.sort-gap')?.style.width).toBe('100%');
+    gap.restore();
+    expect(lists[0]!.classList.contains('is-sort-preview-empty')).toBe(false);
+    expect(lists[1]!.classList.contains('is-sort-preview-filled')).toBe(false);
   });
 });
 

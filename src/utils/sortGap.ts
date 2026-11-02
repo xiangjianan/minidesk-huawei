@@ -9,6 +9,7 @@ export function createSortGap(source: HTMLElement, selector: string) {
   gap.setAttribute('aria-hidden', 'true');
   gap.inert = true;
   gap.style.cssText = `height:${rect.height}px;width:${rect.width}px;max-width:100%;flex-shrink:0;border:0;padding:0;pointer-events:none;box-sizing:border-box;`;
+  if (selector === '.todo-item') gap.style.width = '100%';
   source.before(gap);
   source.style.display = 'none';
   let anchor: HTMLElement | null = null;
@@ -21,12 +22,24 @@ export function createSortGap(source: HTMLElement, selector: string) {
   }
   const animations = new Map<HTMLElement, Animation>();
   const heightAnimations = new Map<HTMLElement, Animation>();
+  const previewLists = new Set<HTMLElement>();
+  function syncTodoPreview(list: HTMLElement | null) {
+    if (selector !== '.todo-item' || !list?.matches('.todo-list')) return;
+    previewLists.add(list);
+    const hasRow = Array.from(list.querySelectorAll<HTMLElement>('.todo-item')).some(row => row !== source);
+    const hasGap = gap.parentElement === list;
+    list.classList.toggle('is-sort-preview-empty', !hasRow && !hasGap);
+    list.classList.toggle('is-sort-preview-filled', list.classList.contains('todo-empty-list') && hasGap);
+  }
   function moveGap(move: () => void, destination: HTMLElement) {
+    const oldParent = gap.parentElement;
     const groupSelector = selector === '.quick-button' ? '.quick-tag-group' : selector === '.todo-item' ? '.todo-section' : '';
     const groups = groupSelector ? Array.from(new Set([gap.parentElement?.closest<HTMLElement>(groupSelector), destination.closest<HTMLElement>(groupSelector)].filter((el): el is HTMLElement => Boolean(el)))) : [];
     const heights = groups.map(group => group.getBoundingClientRect().height);
     groups.forEach(group => { heightAnimations.get(group)?.cancel(); heightAnimations.delete(group); });
     move();
+    syncTodoPreview(oldParent);
+    syncTodoPreview(gap.parentElement);
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     groups.forEach((group, index) => {
       const height = group.getBoundingClientRect().height;
@@ -94,10 +107,12 @@ export function createSortGap(source: HTMLElement, selector: string) {
         ?? (selector === '.todo-item' ? hit?.closest('.todo-section')?.querySelector<HTMLElement>('.todo-list')
           : selector === '.quick-button' ? hit?.closest('.quick-tag-group:not(:has(.is-collapsed))')?.querySelector<HTMLElement>('.quick-buttons') : null);
       if (destination && !isClippedContent(destination)) {
-        const last = Array.from(destination.querySelectorAll<HTMLElement>(selector)).filter(el => el !== source).at(-1);
+        const items = Array.from(destination.querySelectorAll<HTMLElement>(selector)).filter(el => el !== source);
+        const last = items.at(-1);
         if (!last) {
           moveGap(() => destination.append(gap), destination); container = destination; anchor = null;
-        } else if (selector === '.quick-button' || y > last.getBoundingClientRect().bottom) {
+        } else if (y > layoutBounds(last).bottom || (selector === '.quick-button' && items.length === 1 &&
+          gap.parentElement !== destination && y >= layoutBounds(last).top && y <= layoutBounds(last).bottom)) {
           moveGap(() => last.after(gap), destination); anchor = last; before = false; container = null;
         }
       }
@@ -154,6 +169,7 @@ export function createSortGap(source: HTMLElement, selector: string) {
   function restore() {
     clearCollapsedTarget();
     gap.remove();
+    previewLists.forEach(list => list.classList.remove('is-sort-preview-empty', 'is-sort-preview-filled'));
     if (source.parentElement !== parent || source.nextSibling !== next) parent.insertBefore(source, next?.parentNode === parent ? next : null);
     source.style.display = display;
     animations.forEach(animation => animation.cancel());

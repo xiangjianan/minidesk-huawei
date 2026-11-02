@@ -6,6 +6,7 @@ export function createTodoLeaveHooks() {
   const rows = new Map<HTMLElement, { list: HTMLElement; top: string }>();
   const animations = new Map<HTMLElement, Animation>();
   const previousHeights = new Map<HTMLElement, number>();
+  const hiddenRows = new Map<HTMLElement, string>();
   function animateHeight(list: HTMLElement, fromHeight: number, toHeight: number) {
     if (list.closest(".is-sort-committing")) return;
     if (Math.abs(fromHeight - toHeight) < 0.5 || !list.animate || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
@@ -20,6 +21,10 @@ export function createTodoLeaveHooks() {
   }
   function finish(element: Element) {
     const row = element as HTMLElement;
+    if (hiddenRows.has(row)) {
+      row.style.visibility = hiddenRows.get(row)!;
+      hiddenRows.delete(row);
+    }
     const entry = rows.get(row);
     if (!entry) return;
     row.style.top = entry.top;
@@ -51,7 +56,11 @@ export function createTodoLeaveHooks() {
     },
     onBeforeLeave(element: Element) {
       const row = element as HTMLElement;
-      if (row.closest(".is-sort-committing")) return;
+      if (row.closest(".is-sort-committing")) {
+        hiddenRows.set(row, row.style.visibility);
+        row.style.visibility = "hidden";
+        return;
+      }
       // Hidden empty-state markers have no layout to preserve. Holding their
       // zero height delays the first insertion until the leave fade finishes.
       if (row.classList.contains("todo-empty-hint") && window.getComputedStyle(row).display === "none") return;
@@ -85,6 +94,8 @@ export function createTodoLeaveHooks() {
         list.style.height = state.height;
       }
       for (const [row, entry] of rows) row.style.top = entry.top;
+      for (const [row, visibility] of hiddenRows) row.style.visibility = visibility;
+      hiddenRows.clear();
       lists.clear();
       rows.clear();
       previousHeights.clear();
