@@ -4,7 +4,7 @@ import { QUICK_APP_PRESETS, isQuickAppScheme } from "../state/quickApps";
 describe("isQuickAppScheme", () => {
   it("offers the requested app presets in order", () => {
     expect(QUICK_APP_PRESETS.map(({ title, scheme }) => [title.zh, scheme])).toEqual([
-      ["WeLink", "im:"], ["VS Code", "vscode://"], ["Outlook 邮件", "ms-outlook://"],
+      ["WeLink", "im:"], ["VSCode-huawei", "vscodehuawei://file/"],
     ]);
   });
 

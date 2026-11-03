@@ -1260,6 +1260,20 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("fills the Huawei VSCode preset when selected", async () => {
+    const wrapper = mountQuickButtons();
+    await openDialog(wrapper);
+    await wrapper.findAll(".checkbox-stub")[3].trigger("click");
+    await wrapper.get(".quick-app-preset-select").setValue("vscodehuawei://file/");
+    await wrapper.get("form").trigger("submit.prevent");
+    expect(wrapper.emitted("save")?.[0][0]).toMatchObject({
+      title: "VSCode-huawei",
+      value: "vscodehuawei://file/",
+      type: "app",
+    });
+    wrapper.unmount();
+  });
+
   it("syncs the title with the shortcut name while creating an app action", async () => {
     const wrapper = mountQuickButtons();
     await openDialog(wrapper);

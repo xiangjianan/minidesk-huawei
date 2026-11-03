@@ -16,8 +16,7 @@ export interface QuickAppPreset {
 
 export const QUICK_APP_PRESETS: readonly QuickAppPreset[] = [
   { title: { zh: "WeLink", en: "WeLink" }, scheme: "im:", hint: { zh: "工号", en: "employee ID" } },
-  { title: { zh: "VS Code", en: "VS Code" }, scheme: "vscode://", hint: { zh: "file/路径", en: "file/path" } },
-  { title: { zh: "Outlook 邮件", en: "Outlook Mail" }, scheme: "ms-outlook://" },
+  { title: { zh: "VSCode-huawei", en: "VSCode-huawei" }, scheme: "vscodehuawei://file/", hint: { zh: "路径", en: "path" } },
 ];
 
 /** Resolve a preset's display title for the active language. */
