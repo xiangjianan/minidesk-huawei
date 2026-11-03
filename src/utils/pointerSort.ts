@@ -46,7 +46,9 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
     const element = event.target instanceof Element ? event.target : null;
     const candidate = element?.closest<HTMLElement>(selector);
     if (!candidate || !root.contains(candidate) || candidate.draggable === false) return;
-    if (element?.closest("input, textarea, [contenteditable], button") && !candidate.matches("button")) return;
+    const collapseButton = element?.closest(".todo-collapse-button");
+    const fromCollapseButton = Boolean(collapseButton && candidate.matches(".todo-heading") && candidate.contains(collapseButton));
+    if (element?.closest("input, textarea, [contenteditable], button") && !candidate.matches("button") && !fromCollapseButton) return;
     cleanup();
     suppressClick = false;
     source = candidate; pointerId = event.pointerId;
@@ -57,7 +59,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
     const rect = surface.getBoundingClientRect();
     offsetX = startX - rect.left; offsetY = startY - rect.top;
     // Prevent the browser from initiating native drag or selecting heading text.
-    event.preventDefault();
+    if (!fromCollapseButton) event.preventDefault();
   }
   function move(event: PointerEvent): void {
     if (!source || event.pointerId !== pointerId) return;

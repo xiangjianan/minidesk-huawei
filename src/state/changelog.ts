@@ -34,6 +34,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.25",
+      date: "2026-11-03",
+      notes: {
+        zh: ["修复：可从提醒列表折叠按钮拖动列表，同时保留点击折叠", "调整：常用应用预设更新为 VSCode-huawei 并移除 Outlook 邮件"],
+        en: ["Fixed: drag reminder lists from the collapse button while preserving click-to-collapse", "Changed: updated the VSCode-huawei app preset and removed Outlook Mail"],
+      },
+    },
+    {
       version: "1.1.24",
       date: "2026-11-02",
       notes: {

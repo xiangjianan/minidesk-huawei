@@ -36,6 +36,37 @@ function fixture() {
 }
 
 describe("pointer sorting", () => {
+  it("sorts from the reminder collapse button while preserving ordinary clicks", () => {
+    const { root, source, drop } = fixture();
+    const heading = document.createElement("div");
+    heading.className = "todo-heading";
+    heading.draggable = true;
+    heading.innerHTML = '<button class="todo-collapse-button"><span>Toggle</span></button>';
+    const section = document.createElement("section");
+    section.className = "todo-section";
+    source.replaceWith(section);
+    section.append(heading);
+    dispose?.();
+    dispose = installPointerSort(root, ".todo-heading", vi.fn());
+    const button = heading.querySelector("button")!;
+    const click = vi.fn();
+    button.addEventListener("click", click);
+    pointer(button, "pointerdown", 20);
+    pointer(window, "pointerup", 22);
+    button.click();
+    expect(click).toHaveBeenCalledTimes(1);
+
+    pointer(button.querySelector("span")!, "pointerdown", 20);
+    pointer(window, "pointermove", 26);
+    expect(root.querySelector(".sort-gap")).not.toBeNull();
+    expect(section.style.display).toBe("none");
+    pointer(window, "pointerup", 26);
+    button.click();
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(drop).not.toHaveBeenCalled();
+    expect(section.style.display).toBe("");
+  });
+
   it.each([false, true])('preserves quick-button presentation with compact=%s', (compact) => {
     const { root, source } = fixture();
     root.className = `quick-block${compact ? ' is-compact' : ''}`;
