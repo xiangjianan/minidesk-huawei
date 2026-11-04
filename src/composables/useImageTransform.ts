@@ -10,11 +10,18 @@ const DOUBLE_CLICK_SCALE = 2;
 export function useImageTransform() {
   const scale = ref(1);
   const offset = ref({ x: 0, y: 0 });
+  const imageWidth = ref<number>();
   const dragging = ref(false);
   let start = { x: 0, y: 0, ox: 0, oy: 0 };
   const activeImageStyle = computed(() => ({
     transform: `translate(${offset.value.x}px, ${offset.value.y}px) scale(${scale.value})`,
+    "--preview-natural-width": imageWidth.value ? `${imageWidth.value}px` : undefined,
   }));
+
+  function onImageLoad(event: Event): void {
+    const image = event.currentTarget as HTMLImageElement;
+    imageWidth.value = image.naturalWidth / (window.devicePixelRatio || 1);
+  }
 
   function clampScale(value: number): number {
     return Number(clamp(value, MIN_SCALE, MAX_SCALE).toFixed(2));
@@ -79,5 +86,5 @@ export function useImageTransform() {
     offset.value = { x: 0, y: 0 };
   }
 
-  return { scale, offset, dragging, activeImageStyle, adjustZoom, toggleZoom, wheel, down, move, resetTransform };
+  return { scale, offset, dragging, activeImageStyle, onImageLoad, adjustZoom, toggleZoom, wheel, down, move, resetTransform };
 }

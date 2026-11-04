@@ -34,6 +34,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.26",
+      date: "2026-11-04",
+      notes: {
+        zh: ["优化：图片预览按显示像素调整清晰度和宽度，并避让工具栏"],
+        en: ["Improved: image preview clarity and width match display pixels while avoiding the toolbar"],
+      },
+    },
+    {
       version: "1.1.25",
       date: "2026-11-03",
       notes: {

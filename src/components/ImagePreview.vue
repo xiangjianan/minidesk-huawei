@@ -68,7 +68,7 @@ const canNavigatePrevious = computed(() => activeIndex.value > 0);
 const canNavigateNext = computed(() => activeIndex.value >= 0 && activeIndex.value < props.images.length - 1);
 const isClosing = computed(() => props.closing || localClosing.value);
 const isDirectEditMode = computed(() => Boolean(props.activeId) && props.editId === props.activeId);
-const { scale, dragging, activeImageStyle, adjustZoom, toggleZoom, wheel, down, move, resetTransform } = useImageTransform();
+const { scale, dragging, activeImageStyle, onImageLoad, adjustZoom, toggleZoom, wheel, down, move, resetTransform } = useImageTransform();
 const menuOptions = computed<DropdownOption[]>(() => [
   // canEdit=false：编辑入口与无 tips 接线的「Tips」引导项一并隐藏。
   ...getImageItemContextMenuItems(uiText.value, true)
@@ -476,6 +476,7 @@ function isPreviewShortcutKey(event: KeyboardEvent): boolean {
                 :alt="uiText.preview.imageAlt"
                 draggable="false"
                 :style="activeImageStyle"
+                @load="onImageLoad"
                 @contextmenu.prevent="openMenu($event, active.id)"
                 @dblclick.stop.prevent="toggleZoom"
               />

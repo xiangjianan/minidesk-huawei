@@ -98,7 +98,7 @@ const activeIndex = computed(() =>
   props.images.findIndex((image) => image.id === activePreviewId.value));
 const canNavigatePrevious = computed(() => activeIndex.value > 0);
 const canNavigateNext = computed(() => activeIndex.value >= 0 && activeIndex.value < props.images.length - 1);
-const { dragging, activeImageStyle, adjustZoom, toggleZoom, wheel, down, move, resetTransform } = useImageTransform();
+const { dragging, activeImageStyle, onImageLoad, adjustZoom, toggleZoom, wheel, down, move, resetTransform } = useImageTransform();
 
 function navigateFocus(direction: number): boolean {
   if (direction < 0 && !canNavigatePrevious.value) return false;
@@ -425,6 +425,7 @@ function handleModalShow(value: boolean): void {
                   :src="previewImage?.src ?? ''"
                   :alt="uiText.todo.focusImagesLabel"
                   :style="activeImageStyle"
+                  @load="onImageLoad"
                   draggable="false"
                   @dblclick.stop.prevent="toggleZoom"
                 />
