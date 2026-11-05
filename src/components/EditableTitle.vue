@@ -63,9 +63,8 @@ async function enterEditing(): Promise<void> {
   await nextTick();
   const input = inputRef.value;
   if (!input) return;
-  const caret = input.value.length;
   input.focus({ preventScroll: true });
-  setStickySelection(input, caret, caret);
+  setStickySelection(input, 0, input.value.length);
 }
 
 async function startEditing(event: MouseEvent): Promise<void> {

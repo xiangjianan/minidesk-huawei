@@ -356,18 +356,38 @@ describe("WorkbenchShell", () => {
       .split(/\s+/)
       .map((value) => Number.parseFloat(value));
 
-    // 黄金比例 φ：四区从左到右按 (1−0.618):0.618:0.618:1（= φ⁻²:φ⁻¹:φ⁻¹:1）分摊，
-    // 归一化 ≈ 14.6%/23.6%/23.6%/38.2%。权重划分的是竖线到竖线的整段可见跨度
-    // （1200px 网格 − jsdom 下 padding 0 + 3×14px gap 回退 = 内容宽 1158px）。
-    expect(columns).toEqual([169, 273, 273, 442]);
+    // 从网格边缘到分隔线中心，以及分隔线中心之间，计算各区域跨度。
+    expect(columns).toEqual([113, 262, 293, 490]);
     const phi = (1 + Math.sqrt(5)) / 2;
-    expect(columns[1]).toBe(columns[2]);
-    expect(columns[0] / 1158).toBeCloseTo((1 - 1 / phi) / (phi * phi), 2);
-    expect(columns[1] / 1158).toBeCloseTo((1 / phi) / (phi * phi), 2);
-    expect(columns[3] / 1158).toBeCloseTo(1 / (phi * phi), 2);
-    expect(columns[1] / columns[0]).toBeCloseTo(phi, 1);
-    expect(columns[3] / columns[1]).toBeCloseTo(phi, 1);
+    const spans = [columns[0] + 7, columns[1] + 14, columns[2] + 14, columns[3] + 7];
+    expect(spans[0] / 1200).toBeCloseTo(0.1, 2);
+    expect(spans[1] / spans[2]).toBeCloseTo(0.9, 2);
+    expect(spans[2] / 1200).toBeCloseTo(0.9 / (1.9 + phi), 2);
+    expect(spans[3] / spans[2]).toBeCloseTo(phi, 1);
 
+    wrapper.unmount();
+  });
+
+  it("recalculates default divider proportions when the grid width changes", async () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(2400);
+    let width = 1710;
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      return this.classList.contains("workbench-grid")
+        ? { width, height: 748, top: 52, left: 0, right: width, bottom: 800, x: 0, y: 52, toJSON: () => undefined }
+        : originalGetBoundingClientRect.call(this);
+    };
+    const wrapper = mount(WorkbenchShell, { attachTo: document.body, props: defaultProps });
+    await nextTick(); await nextTick();
+    for (const nextWidth of [1710, 2000, 1350]) {
+      width = nextWidth;
+      window.dispatchEvent(new Event("resize"));
+      await nextTick();
+      const tracks = readColumnTracks(wrapper).map(Number.parseFloat);
+      const spans = [tracks[0] + 7, tracks[1] + 14, tracks[2] + 14, tracks[3] + 7];
+      expect(Math.abs(spans[0] - width * 0.1)).toBeLessThanOrEqual(1);
+      expect(Math.abs(spans[1] - spans[2] * 0.9)).toBeLessThanOrEqual(1);
+      expect(Math.abs(spans[3] - spans[2] * (1 + Math.sqrt(5)) / 2)).toBeLessThanOrEqual(2);
+    }
     wrapper.unmount();
   });
 
@@ -499,7 +519,7 @@ describe("WorkbenchShell", () => {
     await nextTick();
     await nextTick();
 
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 169px 273px 273px 442px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 113px 262px 293px 490px");
     expect(wrapper.get(".workbench-zone-tasks").classes()).not.toContain("workbench-zone-collapsed");
 
     const pointerDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true });
@@ -510,10 +530,10 @@ describe("WorkbenchShell", () => {
     await nextTick();
 
     // The task zone shrinks below its 100px minimum instead of clamping and
-    // collapses to the 44px title rail — its golden default (273px) is narrower
+    // collapses to the 44px title rail — its default (293px) is narrower
     // than the 260px drag, so the leftover shrink spills into notes, and the
     // freed space flows to the neighboring workspace zone.
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 169px 243px 44px 702px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 113px 251px 44px 750px");
     expect(wrapper.get(".workbench-zone-tasks").classes()).toContain("workbench-zone-collapsed");
     expect(wrapper.get(".workbench-zone-tasks .workbench-zone-rail").text()).toBe("✅ 提醒事项");
     expect(wrapper.findAll(".workbench-zone-notes .workbench-zone-rail")).toHaveLength(1);
@@ -603,13 +623,13 @@ describe("WorkbenchShell", () => {
     await nextTick();
     expect(wrapper.get(".workbench-zone-tasks").classes()).toContain("workbench-zone-collapsed");
 
-    // Click the collapsed rail: tasks returns to its default width (~273px) and
+    // Click the collapsed rail: tasks returns to its default width (~293px) and
     // content reappears, funded by shrinking the expanded neighbors.
     await wrapper.get(".workbench-zone-tasks .workbench-zone-rail").trigger("click");
     await nextTick();
 
     expect(wrapper.get(".workbench-zone-tasks").classes()).not.toContain("workbench-zone-collapsed");
-    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("273px");
+    expect(wrapper.get(".workbench-grid").attributes("style")).toContain("293px");
     expect(localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY)).not.toBeNull();
 
     wrapper.unmount();

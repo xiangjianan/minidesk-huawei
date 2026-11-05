@@ -115,16 +115,14 @@ describe("SpacePanel", () => {
     const wrapper = mountSpacePanel([{ id: "workspace", title: "工作空间", lines: [] }]);
 
     await wrapper.get(".space-tab").trigger("dblclick");
-    const input = wrapper.get(".space-tab-edit-input").element as HTMLInputElement;
-    expect(input.selectionStart).toBe(4);
-    expect(input.selectionEnd).toBe(4);
+    await wrapper.vm.$nextTick();
     await wrapper.get(".space-tab-edit-input").setValue("资料");
     await wrapper.get(".space-tab-edit-input").trigger("keydown.enter");
 
     expect(wrapper.emitted("rename")?.[0]).toEqual(["workspace", "资料"]);
   });
 
-  it("reveals the caret at the end of a long tab name when editing starts", async () => {
+  it("selects a long tab name when editing starts", async () => {
     const title = "一个很长很长的记事本标签名称需要滚动才能看到末尾";
     const wrapper = mount(SpacePanel, {
       attachTo: document.body,
@@ -134,7 +132,7 @@ describe("SpacePanel", () => {
       await wrapper.get(".space-tab").trigger("dblclick");
       await wrapper.vm.$nextTick();
       const input = wrapper.get(".space-tab-edit-input").element as HTMLInputElement;
-      expect(input.selectionStart).toBe(title.length);
+      expect(input.selectionStart).toBe(0);
       expect(input.selectionEnd).toBe(title.length);
     } finally {
       wrapper.unmount();

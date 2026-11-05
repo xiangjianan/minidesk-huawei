@@ -3377,6 +3377,48 @@ body:has(.image-preview) .shortcut-help-modal.n-card {
   user-select: text;
 }
 
+
+body:has(.image-preview) .n-modal-container:has(.shortcut-help-modal),
+body:has(.image-preview) .n-modal-container:has(.version-history-modal) {
+  z-index: 10100 !important;
+}
+
+body:has(.image-preview) .n-modal-container:has(.shortcut-help-modal) .n-modal-mask {
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.16) !important;
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
+  backdrop-filter: blur(6px) saturate(1.2);
+}
+
+html[data-theme="dark"] body:has(.image-preview) .n-modal-container:has(.shortcut-help-modal) .n-modal-mask {
+  background: rgba(0, 0, 0, 0.32) !important;
+}
+
+body:has(.image-preview) .n-modal-container:has(.version-history-modal) .n-modal-mask {
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.16) !important;
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
+  backdrop-filter: blur(6px) saturate(1.2);
+}
+
+html[data-theme="dark"] body:has(.image-preview) .n-modal-container:has(.version-history-modal) .n-modal-mask {
+  background: rgba(0, 0, 0, 0.32) !important;
+}
+
+body:has(.image-preview) .version-history-modal.n-card {
+  position: relative;
+  z-index: 4310;
+  pointer-events: auto;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+body:has(.image-preview) .version-history-modal .n-scrollbar-container,
+body:has(.image-preview) .version-history-modal .n-scrollbar-content,
+body:has(.image-preview) .version-history-modal .n-scrollbar {
+  pointer-events: auto;
+}
+
 /* The workspace create/rename dialog can be opened from the left switcher while
    the image preview side panel is open. All Naive modal containers share
    z-index 10000, so by DOM order the preview can paint over this dialog; lift
@@ -4132,7 +4174,7 @@ body:has(.image-preview) .workbench-command-bar {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(100px, 0.382fr) minmax(100px, 0.618fr) minmax(100px, 0.618fr) minmax(100px, 1fr);
+  grid-template-columns: minmax(100px, 0.1fr) minmax(100px, 0.23024fr) minmax(100px, 0.25582fr) minmax(100px, 0.41394fr);
 }
 
 .workbench-resizer {

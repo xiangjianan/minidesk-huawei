@@ -86,6 +86,7 @@ const emit = defineEmits<{
 }>();
 
 const dialogOpen = ref(false);
+const titleInput = ref<InstanceType<typeof NInput> | null>(null);
 const listCreateDialog = ref<InstanceType<typeof QuickListDialog> | null>(null);
 const editingId = ref<string | undefined>();
 type QuickApiHeaderFormRow = QuickApiHeader & { id: string };
@@ -347,6 +348,10 @@ function openEdit(id: string): void {
   form.apiBody = button.apiBody ?? "";
   dialogOpen.value = true;
   menu.value = null;
+  void nextTick(() => {
+    titleInput.value?.focus();
+    titleInput.value?.select();
+  });
 }
 
 function setInlineRenameInput(el: Element | ComponentPublicInstance | null): void {
@@ -359,7 +364,7 @@ function startInlineTagRename(groupId: string, groupTitle: string): void {
   inlineTagDraft.value = groupTitle;
   void nextTick(() => {
     inlineRenameInput?.focus();
-    if (inlineRenameInput) setStickySelection(inlineRenameInput, inlineRenameInput.value.length, inlineRenameInput.value.length);
+    if (inlineRenameInput) setStickySelection(inlineRenameInput, 0, inlineRenameInput.value.length);
   });
 }
 
@@ -1038,7 +1043,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
       <form class="quick-form" @submit.prevent="submit">
         <label>
           <span>{{ uiText.quick.title }}</span>
-          <NInput v-model:value="form.title" autocomplete="off" />
+          <NInput ref="titleInput" v-model:value="form.title" autocomplete="off" />
         </label>
         <div class="quick-type-options">
           <label class="checkbox-row">

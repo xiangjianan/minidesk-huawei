@@ -138,7 +138,7 @@ function startTabEdit(id: string, sourceElement?: HTMLElement): void {
     }
     if (editingSpaceId.value !== id || !input.isConnected) return;
     input.focus({ preventScroll: true });
-    setStickySelection(input, input.value.length, input.value.length);
+    setStickySelection(input, 0, input.value.length);
   });
 }
 

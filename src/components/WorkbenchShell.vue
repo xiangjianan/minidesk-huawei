@@ -94,12 +94,10 @@ function selectHeaderMenu(key: string): void {
 const DESKTOP_RESIZE_BREAKPOINT = 1180;
 const WORKBENCH_HEADER_STORAGE_KEY = "mini-desk-workbench-header-hidden";
 const LEGACY_WORKBENCH_HEADER_STORAGE_KEY = "todo-board-workbench-header-hidden";
-// 黄金比例 φ ≈ 1.618：四区从左到右按 (1−0.618):0.618:0.618:1（= φ⁻²:φ⁻¹:φ⁻¹:1，
-// 归一化 ≈ 14.6%/23.6%/23.6%/38.2%）分摊——工作区（笔记+存储双面板）为黄金重心。
-// 权重即竖线到竖线的整段可见跨度占比：zone 紧贴页面左右两侧、无内边距偏移，
-// 分隔线落在列边界上。
+// 图片占 10%，其余 90% 按 0.9:1:φ 分给快捷动作、提醒事项和工作空间。
 const PHI = (1 + Math.sqrt(5)) / 2;
-const DEFAULT_COLUMN_WEIGHTS = [1 - 1 / PHI, 1 / PHI, 1 / PHI, 1] as const;
+const RIGHT_COLUMN_WEIGHT = 0.9 / (1.9 + PHI);
+const DEFAULT_COLUMN_WEIGHTS = [0.1, RIGHT_COLUMN_WEIGHT * 0.9, RIGHT_COLUMN_WEIGHT, RIGHT_COLUMN_WEIGHT * PHI] as const;
 const MIN_COLUMN_WIDTHS = [100, 100, 100, 100] as const;
 // Canonical zone order matches DEFAULT_COLUMN_WEIGHTS / MIN_COLUMN_WIDTHS indices.
 const ZONE_INDEX = { assets: 0, notes: 1, tasks: 2, workspace: 3 } as const;
@@ -127,6 +125,7 @@ const headerHidden = ref(readStoredHeaderHidden());
 const headerHideButton = ref<HTMLButtonElement | null>(null);
 const headerRevealPosition = ref({ right: "126px", top: "10px" });
 const columnWidths = ref<number[]>([]);
+let usingDefaultWidths: boolean | undefined;
 let visibilityAnimations: Animation[] = [];
 let visibilityOverlays: HTMLElement[] = [];
 let visibilityGeneration = 0;
@@ -265,6 +264,7 @@ function readStoredColumnWidths(expectedLength: number = MIN_COLUMN_WIDTHS.lengt
 }
 
 function persistColumnWidths(widths: number[]): void {
+  usingDefaultWidths = false;
   if (typeof localStorage === "undefined") return;
   try {
     localStorage.setItem(widthStorageKey(), JSON.stringify(widths.map((width) => Math.round(width))));
@@ -345,6 +345,18 @@ function splitWidthByWeights(
     pending = pending.filter((index) => index !== pinned);
   }
   return widths;
+}
+
+// Allocate from the outer grid edges and divider centers, then convert those
+// visible spans back to CSS track widths by removing padding and half-gaps.
+function defaultColumnWidths(totalWidth: number, mins: readonly number[], weights: readonly number[]): number[] {
+  const last = mins.length - 1;
+  const offsets = mins.map((_, index) =>
+    (index === 0 ? gridPadding.value.left : gridGap.value / 2)
+    + (index === last ? gridPadding.value.right : gridGap.value / 2),
+  );
+  const spans = splitWidthByWeights(totalWidth, weights, mins.map((min, index) => min + offsets[index]));
+  return spans.map((span, index) => span - offsets[index]);
 }
 
 function fitColumnsToWidth(
@@ -465,7 +477,10 @@ function refreshWorkbenchLayout(preserveVisibilityAnimation = false): void {
   }
   soloAssetsEngaged.value = false;
   const sourceWidths = columnWidths.value.length === mins.length ? columnWidths.value : readStoredColumnWidths(mins.length);
-  columnWidths.value = fitColumnsToWidth(metrics.contentWidth, sourceWidths, activeMins.value, activeWeights.value);
+  if (usingDefaultWidths === undefined) usingDefaultWidths = !sourceWidths;
+  columnWidths.value = sourceWidths && !usingDefaultWidths
+    ? fitColumnsToWidth(metrics.contentWidth, sourceWidths, activeMins.value, activeWeights.value)
+    : defaultColumnWidths(metrics.rect.width, activeMins.value, activeWeights.value);
   void nextTick(syncImagePreviewLeft);
 }
 
@@ -515,6 +530,7 @@ function applyResizeDelta(index: number, delta: number, startWidths: number[], t
     nextWidths[index] = startWidths[index] + actualShrink;
   }
   columnWidths.value = nextWidths;
+  usingDefaultWidths = false;
   if (persist) persistColumnWidths(nextWidths);
   syncImagePreviewLeft();
 }
@@ -592,7 +608,7 @@ function expandZoneToDefault(canonicalIndex: number): void {
   // The zone returns to its default proportional width. Fund the growth from
   // expanded neighbors (proportional to their excess above the minimum); collapsed
   // neighbors stay collapsed and expanded neighbors never collapse as a side effect.
-  const target = fitColumnsToWidth(metrics.contentWidth, undefined, mins, activeWeights.value)[pos];
+  const target = defaultColumnWidths(metrics.rect.width, mins, activeWeights.value)[pos];
   const grow = Math.max(0, target - widths[pos]);
   const fundable = mins.map((min, i) =>
     i === pos || widths[i] < min ? 0 : Math.max(0, widths[i] - min),
@@ -713,6 +729,7 @@ watch(
   () => {
     stopVisibilityAnimation();
     columnWidths.value = [];
+    usingDefaultWidths = undefined;
     soloAssetsEngaged.value = false;
     void nextTick(refreshWorkbenchLayout);
   },

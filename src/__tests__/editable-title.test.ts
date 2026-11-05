@@ -5,6 +5,15 @@ import EditableTitle from "../components/EditableTitle.vue";
 import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
 describe("EditableTitle", () => {
+  it("selects the title when editing by double click", async () => {
+    const wrapper = mount(EditableTitle, { props: { id: "title", value: "提醒事项" } });
+    await wrapper.get(".editable-title").trigger("dblclick");
+    await nextTick();
+    const input = wrapper.get("input").element as HTMLInputElement;
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, input.value.length]);
+    wrapper.unmount();
+  });
+
   it("opens a right-click edit menu before entering title edit mode", async () => {
     const wrapper = mount(EditableTitle, {
       props: {

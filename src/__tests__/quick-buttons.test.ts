@@ -35,7 +35,7 @@ const checkboxStub = {
 };
 
 const inputStub = {
-  methods: { focus() {} },
+  methods: { focus(this: { $el: HTMLInputElement }) { this.$el.focus(); }, select(this: { $el: HTMLInputElement }) { this.$el.select(); } },
   props: ["value", "type"],
   emits: ["update:value"],
   template: `
@@ -1402,6 +1402,18 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("selects the button title when editing from the context menu", async () => {
+    const wrapper = mountQuickButtons({
+      buttons: [{ id: "a", title: "示例标题", value: "https://example.com", type: "link", hidden: false }],
+    });
+    await wrapper.get(".quick-button").trigger("contextmenu");
+    await wrapper.get('[data-key="edit"]').trigger("click");
+    await wrapper.vm.$nextTick();
+    const input = wrapper.get(".quick-form input").element as HTMLInputElement;
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, input.value.length]);
+    wrapper.unmount();
+  });
+
   it("keeps edit actions mounted while the dialog closes after saving", async () => {
     const wrapper = mountQuickButtonsWithPersistentModal({
       buttons: [{ id: "a", title: "示例", value: "https://example.com", type: "link", hidden: false }],
@@ -1474,7 +1486,7 @@ describe("QuickButtons", () => {
     expect(wrapper.get(".quick-tag-collapse-button").element.nextElementSibling?.classList.contains("quick-tag-title-input")).toBe(true);
 
     const input = wrapper.get(".quick-tag-title-input");
-    expect((input.element as HTMLInputElement).selectionStart).toBe(2);
+    expect((input.element as HTMLInputElement).selectionStart).toBe(0);
     expect((input.element as HTMLInputElement).selectionEnd).toBe(2);
     await input.setValue("工作台");
     await input.trigger("blur");

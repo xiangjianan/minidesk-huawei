@@ -34,6 +34,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.27",
+      date: "2026-11-05",
+      notes: {
+        zh: ["优化：工作台默认列宽与窗口缩放时的布局", "优化：标题编辑和图片预览中帮助、版本记录弹窗的层级"],
+        en: ["Improved: default workbench column widths and layout on resize", "Improved: title editing and help and version history dialog layering over image previews"],
+      },
+    },
+    {
       version: "1.1.26",
       date: "2026-11-04",
       notes: {
