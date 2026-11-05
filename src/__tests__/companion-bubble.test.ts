@@ -770,7 +770,7 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
-  it("switches the yunxia companion GIF for dark theme", async () => {
+  it("uses the dark yunxia companion GIF for dark theme", async () => {
     const wrapper = mount(CompanionBubble, {
       props: {
         visible: true,

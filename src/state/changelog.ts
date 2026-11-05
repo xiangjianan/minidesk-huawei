@@ -34,6 +34,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.28",
+      date: "2026-11-05",
+      notes: {
+        zh: ["优化：动态头像 GIF 的透明背景和动画效果", "优化：柔化动态头像消息气泡阴影"],
+        en: ["Improved: transparent backgrounds and animations for companion GIFs", "Improved: softer companion message bubble shadows"],
+      },
+    },
+    {
       version: "1.1.27",
       date: "2026-11-05",
       notes: {
