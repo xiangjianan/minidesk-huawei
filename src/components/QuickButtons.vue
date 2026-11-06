@@ -296,6 +296,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
   );
 
   return [
+    ...areaMenuOptions.value.filter((option) => option.key === "add"),
     { label: uiText.value.common.edit, key: "edit", icon: renderIcon(CreateOutline) },
     { label: button?.hidden ? uiText.value.quick.show : uiText.value.quick.hide, key: "toggle-hidden", icon: renderIcon(button?.hidden ? EyeOutline : EyeOffOutline) },
     ...(button
@@ -304,7 +305,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
           { label: button.type === "text" ? uiText.value.quick.copyContent : button.type === "api" ? uiText.value.quick.copyRequestUrl : button.type === "app" ? uiText.value.quick.copyAppScheme : uiText.value.quick.copyLink, key: "copy-link", icon: renderIcon(CopyOutline) },
         ]
       : []),
-    ...areaMenuOptions.value.filter((option) => ["add", "paste"].includes(String(option.key))),
+    ...areaMenuOptions.value.filter((option) => option.key === "paste"),
     ...(moveMenuChildren.value.length > 0
       ? [{
           label: uiText.value.common.moveToWorkspace,

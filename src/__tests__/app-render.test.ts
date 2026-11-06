@@ -6274,23 +6274,14 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.getComponent(CompanionBubble).props("position")).toBeUndefined();
-      // 无同名冲突也走「新增」二次确认：点确认后 finishImport 落盘并迁移内联载荷。
-      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("新增");
-      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
-      await Promise.resolve();
-      await wrapper.vm.$nextTick();
-      await vi.advanceTimersByTimeAsync(200);
-      await wrapper.vm.$nextTick();
-
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(stored.workspaces).toHaveLength(2);
       const imported = stored.workspaces[1];
       expect(imported.zoneWidthRatios).toEqual([0.1, 0.2, 0.3, 0.4]);
       expect(JSON.parse(localStorage.getItem(`mini-desk-workbench-widths:${imported.id}`)!)).toEqual([1000, 2000, 3000, 4000]);
       expect(wrapper.get(".workbench-grid").attributes("style")).toContain("grid-template-columns: 116px 232px 347px 463px");
-      expect(imported.todos.morning[0].focusImages).toEqual([{ id: "img-1", payloadId: "pay-1", createdAt: 9 }]);
-      await expect(getStoredImagePayload({ id: "img-1", payloadId: "pay-1" })).resolves.toBe("data:image/png;base64,imported");
+      expect(imported.todos.morning[0].focusImages).toEqual([{ id: "img-1", payloadId: expect.any(String), createdAt: 9 }]);
+      await expect(getStoredImagePayload(imported.todos.morning[0].focusImages[0])).resolves.toBe("data:image/png;base64,imported");
     } finally {
       wrapper.unmount();
       restoreIndexedDb();
@@ -6617,6 +6608,8 @@ describe("App shell", () => {
       const settings = wrapper.getComponent(SettingsMenu);
       settings.vm.$emit("exportWorkspace", settings.element as HTMLElement);
       await wrapper.vm.$nextTick();
+      (document.querySelector('[data-testid="confirm-workspace-export"]') as HTMLElement).click();
+      await wrapper.vm.$nextTick();
 
       expect(createObjectURL).toHaveBeenCalled();
       expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
@@ -6643,13 +6636,10 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导入|空间|新增/);
-      expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(true);
-      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖");
-      expect(wrapper.get('[data-testid="companion-secondary"]').text()).toBe("新增");
+      expect(document.querySelector('[data-testid="import-merge"]')).not.toBeNull();
       expect(wrapper.text()).not.toContain("导入内容");
 
-      await wrapper.get('[data-testid="companion-secondary"]').trigger("click");
+      (document.querySelector('[data-testid="import-add"]') as HTMLElement).click();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
@@ -6696,17 +6686,11 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.getComponent(CompanionBubble).props("position")).toBeUndefined();
-      // Conflict prompt: overwrite / add-new / cancel, with the colliding name surfaced.
-      // The bubble text is picked at random from several variants — the regex
-      // must match every one of them (该空间名称已存在 has neither 同名 nor 冲突).
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/同名|冲突|已存在/);
-      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖");
-      expect(wrapper.get('[data-testid="companion-secondary"]').text()).toBe("新增");
-      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("我的桌面");
+      expect(document.querySelector('[data-testid="import-merge"]')).not.toBeNull();
+      expect(document.querySelector('[data-testid="import-replace"]')).not.toBeNull();
 
       // Add-new: duplicate name is auto-suffixed so no two workspaces share a name.
-      await wrapper.get('[data-testid="companion-secondary"]').trigger("click");
+      (document.querySelector('[data-testid="import-add"]') as HTMLElement).click();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
@@ -6721,6 +6705,7 @@ describe("App shell", () => {
       vi.useRealTimers();
     }
   });
+
 
   it("treats default-named (unnamed) workspaces as their displayed title on import conflict", async () => {
     vi.useFakeTimers();
@@ -6751,10 +6736,9 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       // The default-name collision still triggers the overwrite/add-new prompt.
-      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖");
-      expect(wrapper.get('[data-testid="companion-secondary"]').text()).toBe("新增");
+      expect(document.querySelector('[data-testid="import-merge"]')).not.toBeNull();
 
-      await wrapper.get('[data-testid="companion-secondary"]').trigger("click");
+      (document.querySelector('[data-testid="import-add"]') as HTMLElement).click();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
       await vi.advanceTimersByTimeAsync(200);
@@ -6767,6 +6751,59 @@ describe("App shell", () => {
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
+    }
+  });
+
+  it("merges a same-name import without replacing existing data", async () => {
+    const source = defaultState();
+    source.workspaces[0].quickButtons = [{ id: "local", title: "本地", value: "before", type: "text", hidden: false }];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(source));
+    const wrapper = mountApp();
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("import");
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      const incoming = defaultWorkspace("incoming");
+      incoming.quickButtons = [{ id: "local", title: "冲突", value: "after", type: "text", hidden: false }, { id: "new", title: "新增", value: "new", type: "text", hidden: false }];
+      Object.defineProperty(input, "files", { value: [new File([JSON.stringify({ miniDeskWorkspaceExport: true, version: 1, zones: ["notes"], workspace: incoming })], "space.json")], configurable: true });
+      await wrapper.get('input[type="file"]').trigger("change");
+      await vi.waitFor(() => expect(document.querySelector('[data-testid="import-preview"]')?.textContent).toContain("冲突 1"));
+      (document.querySelector('[data-testid="import-merge"]') as HTMLElement).click();
+      await vi.waitFor(() => expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].quickButtons).toHaveLength(2));
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0];
+      expect(saved.quickButtons.map((item: { title: string }) => item.title)).toEqual(["本地", "新增"]);
+    } finally { wrapper.unmount(); }
+  });
+
+  it("requires an area and exports only the selected area", async () => {
+    let blob: Blob | undefined;
+    Object.assign(URL, { createObjectURL: vi.fn((value: Blob) => { blob = value; return "blob:export"; }), revokeObjectURL: vi.fn() });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const source = defaultState();
+    source.workspaces[0].spaces[0].lines = [{ text: "private note", indent: 0 }];
+    source.workspaces[0].quickButtons = [{ id: "q", title: "private action", type: "text", value: "secret", hidden: false }];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(source));
+    const wrapper = mountApp();
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("exportWorkspace");
+      await wrapper.vm.$nextTick();
+      for (const zone of ["assets", "notes", "tasks", "workspace"]) {
+        (document.querySelector(`[data-testid="export-zone-${zone}"]`) as HTMLInputElement).click();
+        await wrapper.vm.$nextTick();
+      }
+      const confirm = document.querySelector('[data-testid="confirm-workspace-export"]') as HTMLButtonElement;
+      expect(confirm.disabled).toBe(true);
+      (document.querySelector('[data-testid="export-zone-assets"]') as HTMLInputElement).click();
+      await wrapper.vm.$nextTick();
+      expect(confirm.disabled).toBe(false);
+      confirm.click();
+      await wrapper.vm.$nextTick();
+      expect(blob).toBeDefined();
+      const exported = await blob!.text();
+      expect(exported).not.toContain("private note");
+      expect(exported).not.toContain("private action");
+      expect(JSON.parse(exported).workspace.quickButtons).toEqual([]);
+    } finally {
+      wrapper.unmount();
     }
   });
 
@@ -6794,6 +6831,9 @@ describe("App shell", () => {
       const settings = wrapper.getComponent(SettingsMenu);
       settings.vm.$emit("exportWorkspace", settings.element as HTMLElement);
       await wrapper.vm.$nextTick();
+      expect(createObjectURL).not.toHaveBeenCalled();
+      (document.querySelector('[data-testid="confirm-workspace-export"]') as HTMLElement).click();
+      await wrapper.vm.$nextTick();
 
       expect(showSaveFilePicker).not.toHaveBeenCalled();
       expect(showDirectoryPicker).not.toHaveBeenCalled();
@@ -6805,7 +6845,7 @@ describe("App shell", () => {
       expect(exportedBlob).toBeInstanceOf(Blob);
       if (!exportedBlob) throw new Error("Expected export blob");
       const exported = await exportedBlob.text();
-      expect(JSON.parse(exported)).toMatchObject({ miniDeskWorkspaceExport: true, version: 1 });
+      expect(JSON.parse(exported)).toMatchObject({ miniDeskWorkspaceExport: true, version: 1, zones: ["assets", "notes", "tasks", "workspace"] });
       expect(JSON.parse(exported).workspace.zoneWidthRatios).toEqual([0.1, 0.2, 0.3, 0.4]);
       expect(JSON.parse(exported).workspace).not.toHaveProperty("inbox");
       expect(exported).not.toContain("0123456789AB");
@@ -6920,11 +6960,8 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/导入|空间|新增/);
-      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("覆盖");
-      expect(wrapper.get('[data-testid="companion-secondary"]').text()).toBe("新增");
-
-      await wrapper.get('[data-testid="companion-secondary"]').trigger("click");
+      expect(document.querySelector('[data-testid="import-merge"]')).not.toBeNull();
+      (document.querySelector('[data-testid="import-add"]') as HTMLElement).click();
       await Promise.resolve();
       await wrapper.vm.$nextTick();
 
@@ -6963,6 +7000,119 @@ describe("App shell", () => {
 
     wrapper.unmount();
   });
+
+
+  it("cancels pending import confirmation and clears companion state when entering mobile", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      const file = new File([JSON.stringify({
+        miniDeskWorkspaceExport: true,
+        version: 1,
+        workspace: { workspaceLines: ["切换中导入"] },
+      })], "todo.json", {
+        type: "application/json",
+      });
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      Object.defineProperty(input, "value", {
+        value: "C:\\fakepath\\todo.json",
+        writable: true,
+        configurable: true,
+      });
+
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(document.querySelector('[data-testid="import-merge"]')).not.toBeNull();
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      expect(input.value).toBe("");
+      expect(document.querySelector('[data-testid="import-merge"]')).toBeNull();
+      expect(wrapper.find(".mobile-desktop-guide").exists()).toBe(true);
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".workbench-shell").exists()).toBe(true);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain("切换中导入");
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not create a stale import confirmation when file text resolves after mobile handoff", async () => {
+    vi.useFakeTimers();
+    const mediaQuery = stubMatchMedia(false);
+    const wrapper = mountApp();
+
+    try {
+      const settings = wrapper.getComponent(SettingsMenu);
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      const fileText = createDeferred<string>();
+      const file = new File([""], "delayed.json", {
+        type: "application/json",
+      });
+      Object.defineProperty(file, "text", {
+        value: vi.fn(() => fileText.promise),
+        configurable: true,
+      });
+      settings.vm.$emit("import", settings.element as HTMLElement);
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      Object.defineProperty(input, "value", {
+        value: "C:\\fakepath\\delayed.json",
+        writable: true,
+        configurable: true,
+      });
+
+      await wrapper.get('input[type="file"]').trigger("change");
+      await Promise.resolve();
+
+      mediaQuery.dispatchEvent({ matches: true } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+
+      fileText.resolve(JSON.stringify({ workspaceLines: ["延迟导入"] }));
+      await Promise.resolve();
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(input.value).toBe("");
+      expect(wrapper.find(".mobile-desktop-guide").exists()).toBe(true);
+      expect(wrapper.find('[data-testid="companion-bubble"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-yes"]').exists()).toBe(false);
+
+      mediaQuery.dispatchEvent({ matches: false } as MediaQueryListEvent);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".workbench-shell").exists()).toBe(true);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain("延迟导入");
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
 
   it("shows about information in the companion bubble instead of a modal", async () => {
     vi.useFakeTimers();

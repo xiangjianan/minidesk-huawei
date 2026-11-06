@@ -34,6 +34,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
     {
+      version: "1.1.29",
+      date: "2026-11-06",
+      notes: {
+        zh: ["新增：导出工作空间时可选择区域", "优化：同名工作空间导入时可安全合并或选择替换"],
+        en: ["New: choose areas when exporting a workspace", "Improved: safely merge or replace a workspace with the same name on import"],
+      },
+    },
+    {
       version: "1.1.28",
       date: "2026-11-05",
       notes: {
