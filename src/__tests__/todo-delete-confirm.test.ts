@@ -93,6 +93,10 @@ describe("todo delete confirmation", () => {
       expect(confirmButtonsVisible(wrapper)).toBe(true);
       await clickConfirm(wrapper, "companion-no");
       expect(remainingTodos(wrapper)).toBe(4);
+      await vi.advanceTimersByTimeAsync(300);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
 
       // The next delete is not remembered as part of any streak — it prompts again.
       await deleteViaMenu(wrapper);
@@ -102,6 +106,33 @@ describe("todo delete confirmation", () => {
     } finally {
       wrapper.unmount();
     }
+  });
+
+  it("does not bring the GIF back after a confirmation times out", async () => {
+    const wrapper = mountApp();
+    try {
+      await deleteViaMenu(wrapper);
+      await vi.advanceTimersByTimeAsync(12000);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      await vi.advanceTimersByTimeAsync(12000);
+      expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+      expect(remainingTodos(wrapper)).toBe(4);
+    } finally { wrapper.unmount(); }
+  });
+
+  it("keeps the confirmation position and restores only the deleted todo", async () => {
+    const wrapper = mountApp();
+    try {
+      await deleteViaMenu(wrapper);
+      const position = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
+      await clickConfirm(wrapper, "companion-yes");
+      await vi.advanceTimersByTimeAsync(200);
+      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toBe(position);
+      expect(remainingTodos(wrapper)).toBe(3);
+      await wrapper.get('[data-testid="companion-action"]').trigger("click");
+      expect(remainingTodos(wrapper)).toBe(4);
+      expect(wrapper.findAll(".todo-item[data-todo-id]").map(item => item.attributes("data-todo-id"))).toEqual(["a", "b", "c", "d"]);
+    } finally { wrapper.unmount(); }
   });
 
   it("still prompts after a long gap since the last delete", async () => {

@@ -709,7 +709,7 @@ async function appendPaste(): Promise<void> {
   const target = textareaRef.value;
   if (!target) return;
   const end = text.value.length;
-  await pasteTextFromClipboard(target, { start: end, end });
+  await pasteTextFromClipboard(target, { start: end, end }, true);
   if (!isUnmounted) target.scrollTop = target.scrollHeight;
 }
 
@@ -892,7 +892,7 @@ function deleteTextSelection(target: HTMLTextAreaElement): void {
   emit("update", linesFromEditorState(text.value, editorMarks.value));
 }
 
-async function pasteTextFromClipboard(target: HTMLTextAreaElement, range = getTextSelectionRange(target)): Promise<void> {
+async function pasteTextFromClipboard(target: HTMLTextAreaElement, range = getTextSelectionRange(target), appendOnNewLine = false): Promise<void> {
   if (!editing.value || target.readOnly) startEditingFromTextarea(target);
   const revision = editorRevision;
   target.setSelectionRange(range.start, range.end);
@@ -908,6 +908,11 @@ async function pasteTextFromClipboard(target: HTMLTextAreaElement, range = getTe
       : uiText.value.app.pasteEmptyClipboard;
     emit("clipboardMessage", message, target.closest<HTMLElement>(".text-panel") ?? undefined);
     return;
+  }
+  if (appendOnNewLine && range.start > 0 && target.value[range.start - 1] !== "\n" && target.value[range.start] !== "\n") {
+    const end = target.selectionEnd;
+    target.setRangeText("\n", range.start, range.start, "end");
+    target.setSelectionRange(end + 1, end + 1);
   }
   normalizeTextareaText(target);
   lastTextSelection.value = null;

@@ -37,6 +37,7 @@ describe("visible workbench actions", () => {
   });
 });
 
+
 describe("ordinary header paste actions", () => {
   function setClipboard(text: string) {
     const readText = vi.fn().mockResolvedValue(text);
@@ -56,7 +57,7 @@ describe("ordinary header paste actions", () => {
     await button.trigger("click");
     await flushPromises();
     expect(readText).toHaveBeenCalledTimes(1);
-    expect(wrapper.get("textarea").element.value).toBe("Keep pasted text");
+    expect(wrapper.get("textarea").element.value).toBe("Keep\n pasted text");
     expect(button.classes()).not.toContain("desk-ai-button");
   });
 
@@ -82,5 +83,6 @@ describe("ordinary header paste actions", () => {
     await wrapper.get('[data-tag-id="work"] .desk-paste-button').trigger("click");
     await flushPromises();
     expect(wrapper.emitted("save")?.at(-1)?.[0]).toMatchObject({ type: "link", value: "https://example.com/path", tagTitle: "Work" });
+
   });
 });

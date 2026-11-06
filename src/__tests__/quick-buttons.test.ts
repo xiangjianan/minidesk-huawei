@@ -1200,6 +1200,18 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("closes the add dialog without saving when cancel is clicked", async () => {
+    const wrapper = mountQuickButtons();
+
+    await openDialog(wrapper);
+    expect(wrapper.findAll(".dialog-actions button").map(button => button.text())).toEqual(["取消", "保存"]);
+    await wrapper.get(".quick-dialog-cancel").trigger("click");
+
+    expect(wrapper.find(".quick-dialog").exists()).toBe(false);
+    expect(wrapper.emitted("save")).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("does not save a quick link when the title is empty", async () => {
     const wrapper = mountQuickButtons();
 

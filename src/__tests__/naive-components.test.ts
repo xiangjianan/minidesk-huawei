@@ -96,7 +96,7 @@ describe("Naive UI component usage", () => {
     expect(companion).not.toContain("content-class=\"companion-popover-shell\"");
     expect(companion).not.toContain("border: '1px solid #111'");
     expect(companion).not.toContain("bubble-box");
-    expect(companion).not.toContain("<button");
+    expect(companion).toContain("companion-undo-button");
     expect(settings).not.toContain('type="file"');
   });
 
@@ -379,7 +379,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.today-focus-input\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.todo-completed-divider\s*\{[^}]*font-size: var\(--app-font-size\)/s);
     expect(styles).toMatch(/\.n-input,[\s\S]*?\.n-card\s*\{[^}]*font-size: var\(--app-font-size\)/s);
-    expect(styles).toMatch(/\.companion-actions \.n-button\s*\{[^}]*min-width: 64px/s);
+    expect(styles).toMatch(/\.companion-actions \.n-button\s*\{[^}]*flex: 1 1 0[^}]*min-width: 0/s);
   });
 
   it("keeps scrollbars and buttons in the simple line UI style", () => {
@@ -494,17 +494,16 @@ describe("Naive UI component usage", () => {
     expect(styles).toMatch(/\.shortcut-help-modal \.n-base-close \.n-base-close__state-border[\s\S]*?\.shortcut-help-modal \.n-base-close \.n-base-close__border\s*\{[^}]*display: none/s);
   });
 
-  it("lifts help and version history above the image preview", () => {
+  it("lifts help and update check above the image preview", () => {
     const styles = read("src/styles.css");
     expect(styles).toContain(".n-modal-container:has(.shortcut-help-modal)");
     expect(styles).toMatch(/body:has\(\.image-preview\) \.n-modal-container:has\(\.shortcut-help-modal\) \.n-modal-mask\s*\{[^}]*pointer-events: auto/s);
     expect(styles).toMatch(/body:has\(\.image-preview\) \.n-modal-container:has\(\.shortcut-help-modal\) \.n-modal-mask\s*\{[^}]*backdrop-filter: blur\(6px\)/s);
     expect(styles).toMatch(/html\[data-theme="dark"\] body:has\(\.image-preview\) \.n-modal-container:has\(\.shortcut-help-modal\) \.n-modal-mask\s*\{[^}]*background: rgba\(0, 0, 0, 0\.32\)/s);
-    expect(styles).toMatch(/\.n-modal-container:has\(\.version-history-modal\)\s*\{[^}]*z-index: 10100/s);
-    expect(styles).toMatch(/body:has\(\.image-preview\) \.n-modal-container:has\(\.version-history-modal\) \.n-modal-mask\s*\{[^}]*backdrop-filter: blur\(6px\)/s);
-    expect(styles).toMatch(/html\[data-theme="dark"\] body:has\(\.image-preview\) \.n-modal-container:has\(\.version-history-modal\) \.n-modal-mask\s*\{[^}]*background: rgba\(0, 0, 0, 0\.32\)/s);
-    expect(styles).toMatch(/\.version-history-modal\.n-card\s*\{[^}]*pointer-events: auto/s);
-    expect(styles).toMatch(/\.version-history-modal \.n-scrollbar\s*\{[^}]*pointer-events: auto/s);
+    expect(styles).toMatch(/\.n-modal-container:has\(\.update-check-modal\)\s*\{[^}]*z-index: 10100/s);
+    expect(styles).toMatch(/body:has\(\.image-preview\) \.n-modal-container:has\(\.update-check-modal\) \.n-modal-mask\s*\{[^}]*backdrop-filter: blur\(6px\)/s);
+    expect(styles).toMatch(/html\[data-theme="dark"\] body:has\(\.image-preview\) \.n-modal-container:has\(\.update-check-modal\) \.n-modal-mask\s*\{[^}]*background: rgba\(0, 0, 0, 0\.32\)/s);
+    expect(styles).toMatch(/\.update-check-modal\.n-card\s*\{[^}]*pointer-events: auto/s);
   });
 
   it("lifts the workspace create/rename dialog above the image preview", () => {
@@ -791,7 +790,7 @@ describe("Naive UI component usage", () => {
     expect(styles).toContain("@keyframes companion-gif-in");
     expect(styles).toMatch(/\.focus-companion\.is-visible\s*\{[^}]*animation: companion-gif-in/s);
     expect(styles).toContain("@keyframes companion-pop");
-    expect(styles).toMatch(/\.companion-popover\s*\{[^}]*animation: companion-pop/s);
+    expect(styles).toContain(".companion-message-enter-active");
     expect(styles).toMatch(/\.companion-popover\s*\{[^}]*transform-origin: right bottom/s);
     // 悬浮层次感只靠气泡自身的静态柔和多层投影：GIF 本体不带任何投影，
     // 气泡与 GIF 也都不再上下位移（无轻浮动画）。

@@ -63,7 +63,7 @@ const uploadStub = defineComponent({
   template: '<div class="upload-stub"><slot /></div>',
 });
 
-type VNodeLike = { type: unknown; props?: { class?: string }; children?: unknown };
+type VNodeLike = { type: unknown; props?: { class?: string; "aria-label"?: string }; children?: unknown };
 
 // The version option's label is a render function returning a root span whose
 // children hold the version text and (when updating) the badge vnode.
@@ -76,6 +76,23 @@ function findVersionBadge(wrapper: ReturnType<typeof mount>) {
 }
 
 describe("SettingsMenu", () => {
+  it("spins the update icon only while a check is running", async () => {
+    const wrapper = mount(SettingsMenu, {
+      props: { appVersion: "1.1.0", updateAvailable: false, updateChecking: false, companionGifTheme: "none" },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
+    });
+    const iconClass = () => {
+      const options = wrapper.findAllComponents(dropdownStub)[1].props("options") as Array<{ key: string; icon?: () => { children?: { default?: () => { props?: { class?: string; "aria-label"?: string } } } } }>;
+      return options.find(option => option.key === "version")?.icon?.().children?.default?.().props?.class;
+    };
+    expect(iconClass()).not.toContain("settings-update-spinning");
+    await wrapper.setProps({ updateChecking: true });
+    expect(iconClass()).toContain("settings-update-spinning");
+    await wrapper.setProps({ updateChecking: false });
+    expect(iconClass()).not.toContain("settings-update-spinning");
+    wrapper.unmount();
+  });
+
   it.each(["zh", "en"] as const)("places visible areas and appearance left of settings and permits repeated toggles in %s", async (language) => {
     const wrapper = mount(SettingsMenu, {
       props: { appVersion: "1.1.0", updateAvailable: false, companionGifTheme: "none", language,
@@ -210,7 +227,38 @@ describe("SettingsMenu", () => {
     expect(wrapper.emitted("suggest")?.[0]).toEqual([expect.any(HTMLElement)]);
   });
 
-  it("点击版本号打开更新记录（无更新时也可点）", async () => {
+  it.each(["about", "version"])("keeps the menu open after selecting %s", async (key) => {
+    const wrapper = mount(SettingsMenu, {
+      props: { appVersion: "1.1.29", updateAvailable: false, companionGifTheme: "none" },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
+    });
+    const settings = wrapper.findAllComponents(dropdownStub)[1];
+    settings.vm.$emit("update:show", true);
+    await wrapper.vm.$nextTick();
+    settings.vm.$emit("select", key);
+    settings.vm.$emit("update:show", false);
+    await wrapper.vm.$nextTick();
+    expect(settings.props("show")).toBe(true);
+    expect(wrapper.emitted(key === "about" ? "about" : "checkUpdate")).toHaveLength(1);
+    settings.vm.$emit("update:show", false);
+    await wrapper.vm.$nextTick();
+    expect(settings.props("show")).toBe(false);
+  });
+
+  it.each([["zh", "检查更新"], ["en", "Check for updates"]] as const)("aligns and localizes the version row in %s", (language, label) => {
+    const wrapper = mount(SettingsMenu, {
+      props: { appVersion: "1.1.29", updateAvailable: false, companionGifTheme: "none", language },
+      global: { stubs: { Dropdown: dropdownStub, NDropdown: dropdownStub } },
+    });
+    const options = wrapper.findAllComponents(dropdownStub)[1].props("options") as Array<{ key: string; icon?: () => unknown; label?: () => VNodeLike }>;
+    const option = options.find((item) => item.key === "version");
+    expect(option?.icon).toBeTypeOf("function");
+    const nodes = option?.label?.()?.children as VNodeLike[];
+    expect(nodes[0].children).toBe(label);
+    expect(nodes[1].children).toBe("v1.1.29");
+  });
+
+  it("点击版本号检查更新（无更新时也可点）", async () => {
     const wrapper = mount(SettingsMenu, {
       props: {
         appVersion: "1.0.11",
@@ -234,10 +282,10 @@ describe("SettingsMenu", () => {
 
     await wrapper.find('[data-key="version"]').trigger("click");
 
-    expect(wrapper.emitted("changelog")).toHaveLength(1);
+    expect(wrapper.emitted("checkUpdate")).toHaveLength(1);
   });
 
-  it("有更新时点击版本号也打开更新记录而非直接更新", async () => {
+  it("有更新时点击版本号检查更新而非直接更新", async () => {
     const wrapper = mount(SettingsMenu, {
       props: {
         appVersion: "1.0.11",
@@ -261,7 +309,7 @@ describe("SettingsMenu", () => {
 
     await wrapper.find('[data-key="version"]').trigger("click");
 
-    expect(wrapper.emitted("changelog")).toHaveLength(1);
+    expect(wrapper.emitted("checkUpdate")).toHaveLength(1);
     expect(wrapper.emitted("update")).toBeUndefined();
   });
 
@@ -288,7 +336,8 @@ describe("SettingsMenu", () => {
     });
 
     const badge = findVersionBadge(wrapper);
-    expect(badge?.children).toBe("有更新");
+    expect(badge?.children).toBeNull();
+    expect(badge?.props?.["aria-label"]).toBe("有更新");
 
     const quiet = mount(SettingsMenu, {
       props: {
@@ -313,7 +362,7 @@ describe("SettingsMenu", () => {
     expect(findVersionBadge(quiet)).toBeUndefined();
   });
 
-  it("英文下更新角标显示 New", () => {
+  it("英文下更新红点有无障碍提示", () => {
     const wrapper = mount(SettingsMenu, {
       props: {
         appVersion: "1.0.11",
@@ -335,7 +384,7 @@ describe("SettingsMenu", () => {
       },
     });
 
-    expect(findVersionBadge(wrapper)?.children).toBe("New");
+    expect(findVersionBadge(wrapper)?.props?.["aria-label"]).toBe("New");
   });
 
   it("shows help and shortcut copy from the settings menu", async () => {

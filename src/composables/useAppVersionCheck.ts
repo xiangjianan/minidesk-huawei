@@ -34,18 +34,19 @@ export function useAppVersionCheck(isMounted: () => boolean) {
     versionChannelVisible.value = false;
   }
 
-  async function checkLatestAppVersion(): Promise<void> {
+  async function checkLatestAppVersion(): Promise<string | null> {
     const latestVersion = await fetchLatestAppVersion();
-    if (!isMounted() || !latestVersion) return;
+    if (!isMounted() || !latestVersion) return null;
 
     if (latestVersion === appVersion.value) {
       availableAppVersion.value = appVersion.value;
       versionChannelVisible.value = false;
-      return;
+      return latestVersion;
     }
 
     availableAppVersion.value = latestVersion;
     versionChannelVisible.value = true;
+    return latestVersion;
   }
 
   async function updateStaticVersion(): Promise<void> {

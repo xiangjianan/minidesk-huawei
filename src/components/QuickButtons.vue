@@ -1143,7 +1143,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
           </label>
         </template>
         <div class="dialog-actions">
-          <NButton v-if="editingId" class="quick-dialog-action quick-dialog-cancel" type="default" @click="closeDialog">{{ uiText.common.cancel }}</NButton>
+          <NButton class="quick-dialog-action quick-dialog-cancel" type="default" @click="closeDialog">{{ uiText.common.cancel }}</NButton>
           <NButton class="quick-dialog-action quick-dialog-submit" attr-type="submit" type="default" :disabled="!canSubmit">{{ uiText.common.save }}</NButton>
         </div>
       </form>

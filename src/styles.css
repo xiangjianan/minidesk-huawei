@@ -547,6 +547,18 @@ html[data-theme="dark"] .n-modal-mask {
   gap: 8px;
 }
 
+.dialog-actions > .n-button,
+.notify-panel-actions > button,
+.gif-theme-custom-actions > button,
+.support-footer > .n-button,
+.workspace-inbox-footer > .n-button {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.dialog-actions > .n-button { height: auto; min-height: 34px; }
+.dialog-actions > .n-button .n-button__content { white-space: normal; text-align: center; }
+
 .save-status {
   position: relative;
   width: 34px;
@@ -2988,9 +3000,14 @@ button.todo-section-menu-button {
   /* GIF 本体不加投影：层次感只由消息气泡自身的多层投影承担。 */
 }
 
+.focus-companion.is-dismissing .focus-companion-gif {
+  opacity: 0;
+}
+
 /* 点击 GIF 会轮换弹出当前区域的 Tips，悬浮用指针光标提示可点。 */
 .focus-companion-gif {
   cursor: pointer;
+  transition: opacity 0.26s ease;
 }
 
 .companion-gif-fade-enter-active,
@@ -3014,11 +3031,41 @@ button.todo-section-menu-button {
   gap: 6px;
   line-height: 1.5;
   transform-origin: right bottom;
-  animation: companion-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .companion-popover > span {
   white-space: pre-line;
+}
+
+button.companion-undo-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 20px;
+  min-height: 0;
+  margin-left: 5px;
+  padding: 0;
+  vertical-align: middle;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.companion-undo-button svg {
+  display: block;
+  flex: none;
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+}
+
+.companion-undo-button:hover,
+.companion-undo-button:focus-visible {
+  background: var(--button-hover);
+  border-color: var(--line-focus);
 }
 
 .companion-confirm-hint {
@@ -3070,9 +3117,12 @@ button.todo-section-menu-button {
   transition: opacity 0.26s ease, transform 0.26s ease;
 }
 
+.companion-popover-shell.n-popover.is-replacing {
+  transition-duration: 0.18s;
+}
+
 .companion-popover-shell.n-popover.is-popover-fading {
   opacity: 0;
-  transform: translateY(4px) scale(0.96);
 }
 
 .companion-popover-arrow {
@@ -3096,7 +3146,8 @@ button.todo-section-menu-button {
 }
 
 .companion-actions .n-button {
-  min-width: 64px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .companion-action-button {
@@ -3303,17 +3354,21 @@ button.todo-section-menu-button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-width: 112px;
+  white-space: nowrap;
+}
+
+.settings-version-number {
+  color: var(--muted);
+  font-size: calc(var(--app-font-size) - 2px);
+  font-variant-numeric: tabular-nums;
 }
 
 .settings-version-badge {
-  padding: 1px 8px;
-  border-radius: 999px;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: var(--danger);
-  color: #fff;
-  font-size: calc(var(--app-font-size) - 3px);
-  line-height: 1.5;
-  white-space: nowrap;
 }
 
 .dropdown-anchor {
@@ -3381,7 +3436,7 @@ body:has(.image-preview) .shortcut-help-modal.n-card {
 
 
 body:has(.image-preview) .n-modal-container:has(.shortcut-help-modal),
-body:has(.image-preview) .n-modal-container:has(.version-history-modal) {
+body:has(.image-preview) .n-modal-container:has(.update-check-modal) {
   z-index: 10100 !important;
 }
 
@@ -3396,29 +3451,23 @@ html[data-theme="dark"] body:has(.image-preview) .n-modal-container:has(.shortcu
   background: rgba(0, 0, 0, 0.32) !important;
 }
 
-body:has(.image-preview) .n-modal-container:has(.version-history-modal) .n-modal-mask {
+body:has(.image-preview) .n-modal-container:has(.update-check-modal) .n-modal-mask {
   pointer-events: auto;
   background: rgba(15, 23, 42, 0.16) !important;
   -webkit-backdrop-filter: blur(6px) saturate(1.2);
   backdrop-filter: blur(6px) saturate(1.2);
 }
 
-html[data-theme="dark"] body:has(.image-preview) .n-modal-container:has(.version-history-modal) .n-modal-mask {
+html[data-theme="dark"] body:has(.image-preview) .n-modal-container:has(.update-check-modal) .n-modal-mask {
   background: rgba(0, 0, 0, 0.32) !important;
 }
 
-body:has(.image-preview) .version-history-modal.n-card {
+body:has(.image-preview) .update-check-modal.n-card {
   position: relative;
   z-index: 4310;
   pointer-events: auto;
   -webkit-user-select: text;
   user-select: text;
-}
-
-body:has(.image-preview) .version-history-modal .n-scrollbar-container,
-body:has(.image-preview) .version-history-modal .n-scrollbar-content,
-body:has(.image-preview) .version-history-modal .n-scrollbar {
-  pointer-events: auto;
 }
 
 /* The workspace create/rename dialog can be opened from the left switcher while
@@ -3617,131 +3666,6 @@ body:has(.image-preview) .image-panel .n-scrollbar {
   display: grid;
   gap: 10px;
   padding: 14px 16px 18px;
-}
-
-.version-history-modal {
-  width: min(560px, calc(100vw - 32px)) !important;
-  max-width: 560px !important;
-  margin: 0 auto;
-}
-
-.version-history-modal .n-card__content {
-  padding: 0 !important;
-}
-
-.version-history-content {
-  max-height: min(68vh, 680px);
-}
-
-.version-history-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 16px 18px;
-}
-
-.version-history-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 2px 0 4px;
-  font-size: var(--app-font-size);
-}
-
-.version-history-status-current,
-.version-history-status-arrow {
-  color: var(--muted);
-}
-
-.version-history-status-latest {
-  color: var(--danger);
-  font-weight: 600;
-}
-
-.version-history-update {
-  align-self: flex-start;
-  margin: 2px 0 8px;
-  padding: 6px 14px;
-  border: 0;
-  border-radius: var(--radius);
-  background: var(--danger);
-  color: #fff;
-  font-size: var(--app-font-size);
-  line-height: 1.4;
-  cursor: pointer;
-  transition: opacity 0.18s ease;
-}
-
-.version-history-update:hover {
-  opacity: 0.88;
-}
-
-.version-history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.version-history-entry {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--line-main);
-}
-
-.version-history-list .version-history-entry:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.version-history-entry-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.version-history-version {
-  font-weight: 600;
-  font-size: calc(var(--app-font-size) + 1px);
-  color: var(--text);
-}
-
-.version-history-badge {
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--danger) 16%, transparent);
-  color: var(--danger);
-  font-size: calc(var(--app-font-size) - 3px);
-  line-height: 1.5;
-}
-
-.version-history-date {
-  margin-left: auto;
-  color: var(--muted);
-  font-size: calc(var(--app-font-size) - 2px);
-}
-
-.version-history-notes {
-  margin: 0;
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: var(--text);
-  font-size: var(--app-font-size);
-  line-height: 1.55;
-}
-
-.version-history-notes li {
-  padding-left: 2px;
-}
-
-.version-history-notes li::marker {
-  color: var(--muted);
 }
 
 .shortcut-keyboard-overview,
@@ -4944,10 +4868,6 @@ button.space-add-button,
   background-color: color-mix(in srgb, var(--border) 78%, transparent) !important;
 }
 
-.settings-version-item {
-  color: var(--muted);
-}
-
 .image-list {
   gap: 12px;
   padding: 10px;
@@ -6139,6 +6059,8 @@ body,
    appearance free of both the global focus halo and a focus underline. */
 /* 复制反馈气泡：成功/失败时自动浮现在按钮下方，无需 hover，短暂停留后随状态还原消失。 */
 
+
+
 /* 卡片标题的下方辅助行：当输入包含多行时实时提示「按行拆分」的条数，
    让用户在上滑发送前就明白每一行都会成为一条独立记录。 */
 
@@ -6328,7 +6250,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 }
 
 /* naive-ui 2.44 的内容类名是 .n-card-content（连字符；.n-card__content 是
-   旧版类名，同文件 shortcut-help/version-history 处的旧选择器已不命中）。 */
+   旧版类名，同文件 shortcut-help 处的旧选择器已不命中）。 */
 .focus-now-modal .n-card-content {
   padding: 0 !important;
 }
@@ -6622,4 +6544,51 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 }
 .is-sort-committing :is(.todo-item, .todo-completed-divider, .today-focus-item, .todo-section, .quick-button, .quick-tag-group, .image-card, .space-tab, .workspace-switcher-item) {
   transform: none !important;
+}
+
+/* Menu labels are controls, not selectable document text. */
+.n-dropdown-menu,
+[role="menu"],
+.workspace-switcher,
+.zone-visibility-popover {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.settings-update-spinning {
+  animation: settings-update-spin 0.8s linear infinite;
+}
+
+@keyframes settings-update-spin {
+  to { transform: rotate(360deg); }
+}
+
+.companion-message-stack {
+  display: grid;
+  align-items: end;
+}
+
+.companion-message-stack > .companion-popover {
+  grid-area: 1 / 1;
+}
+
+.companion-message-enter-active,
+.companion-message-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.companion-message-enter-from,
+.companion-message-leave-to {
+  opacity: 0;
+}
+
+.companion-surface-leave-active {
+  animation: none !important;
+  transition: opacity 0.26s ease, transform 0.26s ease;
+  pointer-events: none;
+}
+
+.companion-surface-leave-to {
+  opacity: 0 !important;
+  transform: translateY(8px) scale(0.96) !important;
 }

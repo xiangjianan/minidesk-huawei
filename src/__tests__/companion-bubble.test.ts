@@ -59,6 +59,23 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
+  it("replays the same message after the companion has faded away", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: { visible: true, message: "关于", sequence: 1 },
+      global: { stubs: { NPopover: popoverStub } },
+    });
+    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(10260);
+    expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(false);
+    await wrapper.setProps({ sequence: 2 });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(wrapper.find(".focus-companion.is-visible").exists()).toBe(true);
+    expect(document.body.querySelector('[data-testid="companion-confirm"]')?.textContent).toContain("关于");
+    wrapper.unmount();
+  });
+
   it("reserves the GIF box before the image finishes loading", async () => {
     const wrapper = mount(CompanionBubble, {
       props: {
@@ -425,7 +442,7 @@ describe("CompanionBubble", () => {
     wrapper.unmount();
   });
 
-  it("does not render a single undo action button", async () => {
+  it("renders the supplied undo action button", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {
       attachTo: document.body,
@@ -445,7 +462,8 @@ describe("CompanionBubble", () => {
     await vi.advanceTimersByTimeAsync(200);
     await wrapper.vm.$nextTick();
 
-    expect(document.body.querySelector('[data-testid="companion-action"]')).toBeNull();
+    expect(document.body.querySelector('[data-testid="companion-action"]')?.getAttribute("aria-label")).toBe("撤销");
+    expect(document.body.querySelector('[data-testid="companion-action"] svg')?.getAttribute("width")).toBe("13");
     expect(document.body.querySelector('[data-testid="companion-yes"]')).toBeNull();
     expect(document.body.querySelector('[data-testid="companion-no"]')).toBeNull();
 

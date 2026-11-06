@@ -1710,6 +1710,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(rows[0].attributes("data-confirm-target")).toBeUndefined();
+      expect(wrapper.find(".companion-popover-shell").classes()).toContain("is-popover-fading");
+      await vi.advanceTimersByTimeAsync(260);
       expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
     } finally {
       wrapper.unmount();
@@ -2441,7 +2443,7 @@ describe("App shell", () => {
     }
   });
 
-  it("confirms todo deletion with semantic labels and no undo", async () => {
+  it("confirms todo deletion with semantic labels and undo", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -2472,7 +2474,7 @@ describe("App shell", () => {
 
       expect(wrapper.findAll("input.todo-input").some((input) => (input.element as HTMLInputElement).value === "待删除提醒")).toBe(false);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/提醒已删除/);
-      expect(wrapper.find('[data-testid="companion-action"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-action"]').exists()).toBe(true);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -3215,7 +3217,7 @@ describe("App shell", () => {
     }
   });
 
-  it("confirms image deletion with semantic labels and no undo", async () => {
+  it("confirms image deletion and restores it with undo", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -3244,7 +3246,9 @@ describe("App shell", () => {
 
       expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>)).toHaveLength(0);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/图片已删除/);
-      expect(wrapper.find('[data-testid="companion-action"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-action"]').exists()).toBe(true);
+      await wrapper.get('[data-testid="companion-action"]').trigger("click");
+      expect((wrapper.getComponent(ImagePanel).props("images") as Array<{ id: string }>).map((item) => item.id)).toContain("img-1");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -3455,7 +3459,7 @@ describe("App shell", () => {
     }
   });
 
-  it("places image deletion feedback at the screen corner after deleting an image card", async () => {
+  it("keeps image deletion feedback at the confirmation position", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -3491,9 +3495,9 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      // 确认后的删除成功提示也是普通气泡：落屏幕右下角（CSS 默认定位，无内联样式）。
+      // 删除反馈保留确认框的位置。
       const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-      expect(style).toBeUndefined();
+      expect(style).toContain("right:");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -3557,7 +3561,7 @@ describe("App shell", () => {
     }
   });
 
-  it("anchors image deletion feedback to the screenshot list after deleting from preview", async () => {
+  it("keeps image deletion feedback at the preview confirmation position", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -3609,16 +3613,16 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      // 删除反馈是普通提示消息：固定屏幕右下角，不再锚定截图列表区域。
+      // 删除反馈保留确认框的位置。
       const style = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
-      expect(style).toBeUndefined();
+      expect(style).toContain("right:");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
     }
   });
 
-  it("confirms quick button deletion with semantic labels and no undo", async () => {
+  it("confirms quick button deletion and restores it with undo", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     localStorage.setItem(
@@ -3646,7 +3650,9 @@ describe("App shell", () => {
 
       expect((wrapper.getComponent(QuickButtons).props("buttons") as Array<{ id: string }>)).toHaveLength(0);
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/快捷按钮已删除/);
-      expect(wrapper.find('[data-testid="companion-action"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-action"]').exists()).toBe(true);
+      await wrapper.get('[data-testid="companion-action"]').trigger("click");
+      expect((wrapper.getComponent(QuickButtons).props("buttons") as Array<{ id: string }>).map((item) => item.id)).toContain("quick-1");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -5744,7 +5750,7 @@ describe("App shell", () => {
       expect(deleteSpy).not.toHaveBeenCalled();
 
       // Once the grace window elapses without an undo, the payload is reclaimed.
-      await vi.advanceTimersByTimeAsync(1500);
+      await vi.advanceTimersByTimeAsync(4500);
       expect(deleteSpy).toHaveBeenCalledWith("img-del");
     } finally {
       wrapper.unmount();
@@ -5831,8 +5837,8 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(4000);
       expect(deleteSpy).not.toHaveBeenCalledWith("pay-1");
 
-      // Once the grace window elapses, only the todo's focus payload is reclaimed.
-      await vi.advanceTimersByTimeAsync(1500);
+      // Cleanup starts after the undo bubble expires, then observes the image grace window.
+      await vi.advanceTimersByTimeAsync(4500);
       expect(deleteSpy).toHaveBeenCalledWith("pay-1");
       expect(deleteSpy).not.toHaveBeenCalledWith("img-board");
     } finally {
@@ -8349,6 +8355,38 @@ describe("App shell", () => {
     }
   });
 
+  it.each([
+    { latest: FALLBACK_APP_VERSION, expected: "当前已是最新版本", update: false },
+    { latest: "99.0.0", expected: "发现新版本 v99.0.0", update: true },
+    { latest: null, expected: "检查失败，请检查网络后重试", update: false },
+  ])("manually checks updates and reports $expected", async ({ latest, expected, update }) => {
+    const response = (version: string) => ({ ok: true, text: async () => `<meta name="app-version" content="${version}">` });
+    const fetchMock = vi.fn().mockResolvedValue(response(FALLBACK_APP_VERSION));
+    vi.stubGlobal("fetch", fetchMock);
+    const wrapper = mountApp();
+    try {
+      await flushPromises();
+      fetchMock.mockResolvedValueOnce(latest ? response(latest) : { ok: false });
+      wrapper.getComponent(SettingsMenu).vm.$emit("checkUpdate");
+      await flushPromises();
+      if (update) {
+        expect(wrapper.get('[data-testid="update-check-status"]').text()).toBe(expected);
+        expect(wrapper.find('[data-testid="update-check-apply"]').exists()).toBe(true);
+        await wrapper.get('[data-testid="update-check-cancel"]').trigger("click");
+        expect(wrapper.find('[data-testid="update-check-status"]').exists()).toBe(false);
+      } else {
+        expect(wrapper.find('[data-testid="update-check-status"]').exists()).toBe(false);
+        if (latest) expect(wrapper.getComponent(CompanionBubble).props("message")).toMatch(/最新版|最新版本|最新的/);
+        else expect(wrapper.getComponent(CompanionBubble).props("message")).toBe(expected);
+      }
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      if (update) expect(wrapper.getComponent(SettingsMenu).props("updateAvailable")).toBe(true);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("does not check for deployed versions when the window regains focus or the page becomes visible", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockResolvedValue({
@@ -8698,4 +8736,6 @@ describe("App shell", () => {
       vi.useRealTimers();
     }
   });
+
+
 });

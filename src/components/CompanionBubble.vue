@@ -2,6 +2,7 @@
 import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { LogoGithub } from "@vicons/ionicons5";
+import { Undo2 } from "lucide-vue-next";
 import { CloseOutline, EyeOffOutline } from "@vicons/ionicons5";
 import { NButton, NDropdown, NIcon, NPopover } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
@@ -12,7 +13,9 @@ import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu }
 
 const props = withDefaults(defineProps<{
   visible: boolean;
+  dismissing?: boolean;
   message: string;
+  sequence?: number;
   linkText?: string;
   linkHref?: string;
   signatureText?: string;
@@ -71,6 +74,9 @@ const renderedSecondaryText = ref("");
 const renderedActionText = ref("");
 const popoverTimer = ref<number | undefined>();
 const contentTimer = ref<number | undefined>();
+const replacementTimer = ref<number | undefined>();
+const replacingPopover = ref(false);
+let renderedSequence = props.sequence;
 const gifTimer = ref<number | undefined>();
 const gifFadeTimer = ref<number | undefined>();
 const gifRemainingMs = ref(GIF_MAX_VISIBLE_MS);
@@ -168,7 +174,7 @@ function syncRenderedContent(): void {
   renderedCancelText.value = props.cancelText ?? uiText.value.common.no;
   renderedConfirmHint.value = props.confirmHint ?? "";
   renderedSecondaryText.value = props.secondaryText ?? "";
-  renderedActionText.value = "";
+  renderedActionText.value = props.actionText ?? "";
 }
 
 watch(
@@ -210,6 +216,8 @@ watch(
   () =>
     [
       props.visible,
+      props.dismissing,
+      props.sequence,
       props.message,
       props.linkText,
       props.linkHref,
@@ -233,6 +241,11 @@ watch(
     gifFadeTimer.value = undefined;
     gifRemainingMs.value = GIF_MAX_VISIBLE_MS;
     gifTimerStartedAt.value = 0;
+    if (props.dismissing && visible) {
+      gifVisible.value = false;
+      gifFading.value = true;
+      return;
+    }
     if (!visible || !shouldRenderGif.value) {
       hoveringCompanion.value = false;
       gifVisible.value = false;
@@ -253,7 +266,7 @@ watch(
 watch(
   () => [props.message, props.linkText, props.linkHref, props.confirm, props.confirmDanger, props.confirmText, props.cancelText, props.confirmHint, props.secondaryText, props.actionText, props.language] as const,
   () => {
-    if (!popoverVisible.value) return;
+    if (!popoverVisible.value || props.sequence !== renderedSequence) return;
     // The clearSignal watch can strand `delayedPopoverVisible` at false while
     // `popoverVisible` stays bridged true: focus fires hideBubbleMessage (bumps
     // clearSignal) and a same-tick tip re-show, so popoverVisible never makes
@@ -268,6 +281,26 @@ watch(
       }, POPOVER_DELAY_MS);
     }
     syncRenderedContent();
+  },
+);
+
+watch(
+  () => props.sequence,
+  (sequence) => {
+    window.clearTimeout(replacementTimer.value);
+    if (!popoverVisible.value || !delayedPopoverVisible.value || props.confirm || renderedConfirm.value) {
+      renderedSequence = sequence;
+      replacingPopover.value = false;
+      syncRenderedContent();
+      return;
+    }
+    replacingPopover.value = true;
+    replacementTimer.value = window.setTimeout(() => {
+      renderedSequence = sequence;
+      syncRenderedContent();
+      replacingPopover.value = false;
+      replacementTimer.value = undefined;
+    }, 180);
   },
 );
 
@@ -294,17 +327,26 @@ watch(
 onMounted(() => {
   exclusiveMenu.mount();
   window.addEventListener("keydown", handleConfirmKeydown, { capture: true });
+  window.addEventListener("click", handleConfirmOutsideClick, { capture: true });
 });
 
 onUnmounted(() => {
   exclusiveMenu.unmount();
   window.removeEventListener("keydown", handleConfirmKeydown, { capture: true });
+  window.removeEventListener("click", handleConfirmOutsideClick, { capture: true });
   stopWindowMousemoveTracking();
   window.clearTimeout(popoverTimer.value);
   window.clearTimeout(contentTimer.value);
+  window.clearTimeout(replacementTimer.value);
   window.clearTimeout(gifTimer.value);
   window.clearTimeout(gifFadeTimer.value);
 });
+
+function handleConfirmOutsideClick(event: MouseEvent): void {
+  if (!props.confirm || !(event.target instanceof Node)) return;
+  if (surfaceRef.value?.contains(event.target) || popoverRef.value?.contains(event.target)) return;
+  emit("no");
+}
 
 function handleConfirmKeydown(event: KeyboardEvent): void {
   if (event.key !== "Enter") return;
@@ -403,11 +445,12 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
 </script>
 
 <template>
+  <Transition name="companion-surface">
   <div
     v-if="surfaceVisible"
     ref="surfaceRef"
     class="focus-companion"
-    :class="{ 'is-visible': gifVisible || (!shouldRenderGif && popoverVisible), 'is-fading': gifFading }"
+    :class="{ 'is-visible': gifVisible || (!shouldRenderGif && popoverVisible), 'is-fading': gifFading, 'is-dismissing': retainingPopoverContent && !popoverVisible }"
     :style="placementStyle"
     data-testid="companion-bubble"
     :aria-hidden="!surfaceVisible"
@@ -425,7 +468,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
       :arrow-point-to-center="true"
       :animated="false"
       :z-index="CONTEXT_MENU_Z_INDEX"
-      :class="['companion-popover-shell', { 'is-popover-fading': retainingPopoverContent, 'is-confirm-danger': renderedConfirm && renderedConfirmDanger }]"
+      :class="['companion-popover-shell', { 'is-popover-fading': retainingPopoverContent || replacingPopover, 'is-replacing': replacingPopover, 'is-confirm-danger': renderedConfirm && renderedConfirmDanger }]"
       arrow-class="companion-popover-arrow"
       :style="{ maxWidth: '240px', '--n-box-shadow': 'none' }"
     >
@@ -450,6 +493,8 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
         </Transition>
       </template>
 
+      <div class="companion-message-stack">
+      <Transition name="companion-message" appear>
       <div
         v-if="popoverContentVisible"
         ref="popoverRef"
@@ -461,7 +506,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
         @mousemove="handleCompanionMousemove"
         @mouseleave="handleCompanionMouseleave"
       >
-        <span v-if="renderedMessage">{{ renderedMessage }}</span>
+        <span v-if="renderedMessage">{{ renderedMessage }}<button v-if="!renderedConfirm && renderedActionText" type="button" class="companion-undo-button" data-testid="companion-action" :aria-label="renderedActionText" :title="renderedActionText" @click="emit('action')"><Undo2 :size="13" :stroke-width="1.5" aria-hidden="true" /></button></span>
         <p v-if="renderedConfirmHint" class="companion-confirm-hint">{{ renderedConfirmHint }}</p>
         <div v-if="renderedLinkText || renderedSignatureText" class="companion-meta-row">
           <a
@@ -488,9 +533,8 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
           <NButton v-if="renderedSecondaryText" size="tiny" class="companion-action-button" data-testid="companion-secondary" @click="emit('secondary')">{{ renderedSecondaryText }}</NButton>
           <NButton size="tiny" class="companion-action-button" data-testid="companion-no" @click="emit('no')">{{ renderedCancelText }}</NButton>
         </div>
-        <div v-else-if="renderedActionText" class="companion-actions">
-          <NButton size="tiny" class="companion-action-button" data-testid="companion-action" @click="emit('action')">{{ renderedActionText }}</NButton>
-        </div>
+      </div>
+      </Transition>
       </div>
     </NPopover>
     <NDropdown
@@ -508,4 +552,5 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
       <span class="dropdown-anchor" :style="{ left: `${gifMenu.x}px`, top: `${gifMenu.y}px` }" aria-hidden="true" />
     </NDropdown>
   </div>
+  </Transition>
 </template>

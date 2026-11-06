@@ -91,7 +91,9 @@ import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey,
 const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
 const SupportAuthor = defineAsyncComponent(() => import("./components/SupportAuthor.vue"));
-const VersionHistory = defineAsyncComponent(() => import("./components/VersionHistory.vue"));
+
+
+
 
 // viewport-fit=cover 下，940px 断点覆盖 iPhone Pro Max 的 932pt 横屏。
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 940px)";
@@ -218,9 +220,13 @@ const {
 
 const {
   bubbleMessage,
+  bubbleSequence,
   bubbleLink,
   bubbleSignature,
   bubbleVisible,
+  companionDismissing,
+  bubbleActionText,
+  runBubbleAction,
   companionFocused,
   companionPosition,
   bubbleAnchor,
@@ -251,8 +257,7 @@ setBubbleExpiredHandler((options) => {
   if (options.guideKey) activeGuideKey.value = null;
 });
 setHostHideCompanion(() => {
-  hideBubbleMessage();
-  companionFocused.value = false;
+  hideBubbleMessage({ fadeCompanion: true });
   activeGuideKey.value = null;
 });
 // Bumped after "clear data" so the whole workbench shell remounts and its
@@ -303,7 +308,8 @@ const emptyTodoRemovalTimers = new Map<string, number>();
 const pendingImagePayloadDeletions = new Map<string, number>();
 const shortcutHelpVisible = ref(false);
 const supportDialogVisible = ref(false);
-const changelogVisible = ref(false);
+const updateCheckVisible = ref(false);
+const updateChecking = ref(false);
 const isMobileBlocked = ref(getInitialMobileBlocked());
 watch(isMobileBlocked, (blocked) => {
   if (blocked && importConflict.value) {
@@ -671,6 +677,16 @@ function finishSpaceEdit(id: string): void {
   if (pendingEditSpaceId.value === id) pendingEditSpaceId.value = null;
 }
 
+function showDeleteUndo(message: string, anchor: HTMLElement | undefined, restore: () => void, cleanup?: () => void): void {
+  let restored = false;
+  showBubbleText(message, anchor, {
+    keepPosition: true, force: true, hideCompanionAfter: true,
+    actionText: uiText.value.imageEditor.undo,
+    onAction: () => { restore(); restored = true; },
+    onDismiss: () => { if (!restored) cleanup?.(); },
+  });
+}
+
 function deleteSpace(id: string): void {
   if (activeWorkspace.value.spaces.length <= 1) {
     showBubbleText(uiText.value.app.keepOneSpace);
@@ -680,14 +696,25 @@ function deleteSpace(id: string): void {
   requestConfirmation("confirmDeleteSpace", anchor, () => {
     const index = activeWorkspace.value.spaces.findIndex((space) => space.id === id);
     if (index < 0 || activeWorkspace.value.spaces.length <= 1) return;
+    const workspaceId = activeWorkspace.value.id;
+    const removedSpace = JSON.parse(JSON.stringify(activeWorkspace.value.spaces[index]));
+    const wasActive = activeWorkspace.value.activeSpaceId === id;
     activeWorkspace.value.spaces.splice(index, 1);
     if (activeWorkspace.value.activeSpaceId === id) {
       activeWorkspace.value.activeSpaceId = activeWorkspace.value.spaces[Math.max(0, index - 1)]?.id ?? activeWorkspace.value.spaces[0].id;
     }
-    // 便签落点空间被删：配对码一并清空（手机端立即失效），云端队列走手动清除同路径注销，失败仅气泡警告。
+
+
     syncLegacySpaceLines();
     persistNow();
-    showBubble("deleteSpace", anchor, { hideCompanionAfter: true });
+    showDeleteUndo(getMessage("deleteSpace", Math.random, state.language), anchor, () => {
+      const workspace = state.workspaces.find((item) => item.id === workspaceId);
+      if (!workspace || workspace.spaces.some((item) => item.id === id)) return;
+      workspace.spaces.splice(Math.min(index, workspace.spaces.length), 0, removedSpace);
+      if (wasActive && state.activeWorkspaceId === workspaceId) workspace.activeSpaceId = id;
+      if (state.activeWorkspaceId === workspaceId) syncLegacySpaceLines();
+      persistNow();
+    });
   }, undefined, { confirmText: uiText.value.app.deleteSpace, cancelText: uiText.value.common.cancel, highlightTarget: getSpaceGroupTargets(id) });
 }
 
@@ -895,8 +922,12 @@ function deleteWorkspace(id: string, anchor?: HTMLElement): void {
     "confirmDeleteWorkspace",
     anchor,
     async () => {
-      // 整区删除连坐配对：被删工作区的配对码随区消失，云端队列同步注销（失败仅气泡警告）。
       const doomedWorkspace = state.workspaces.find((workspace) => workspace.id === id);
+
+      if (!doomedWorkspace) return;
+      const workspaceIndex = state.workspaces.findIndex((workspace) => workspace.id === id);
+      const removedWorkspace = JSON.parse(JSON.stringify(doomedWorkspace));
+
       const doomedPayloadIds = new Set([
         ...(doomedWorkspace?.images ?? []).map((image) => getImagePayloadId(image)),
         ...Object.values(doomedWorkspace?.todos ?? {}).flatMap((todos) => collectTodoFocusPayloadIds(todos)),
@@ -917,9 +948,14 @@ function deleteWorkspace(id: string, anchor?: HTMLElement): void {
       // 整区删除连坐本地存储：该工作区独占的四区宽度键即刻清理；图片负载
       // 沿用单图删除的 5 秒宽限（期间可被撤销/重导入保住），到期未被任何
       // 工作区引用即从 IndexedDB 清除，不占配额。
-      removeWorkbenchWidths(id);
-      doomedPayloadIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
-      showBubble("deleteWorkspace", anchor, { hideCompanionAfter: true });
+      showDeleteUndo(getMessage("deleteWorkspace", Math.random, state.language), anchor, () => {
+        if (state.workspaces.some((workspace) => workspace.id === id)) return;
+        state.workspaces.splice(Math.min(workspaceIndex, state.workspaces.length), 0, removedWorkspace);
+        persistNow();
+      }, () => {
+        removeWorkbenchWidths(id);
+        doomedPayloadIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
+      });
     },
     undefined,
     { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel, danger: true },
@@ -1562,7 +1598,8 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteImage", anchor, async () => {
     const index = activeWorkspace.value.images.findIndex((image) => image.id === id);
     if (index < 0) return;
-    const deletedImage = activeWorkspace.value.images[index];
+    const workspaceId = activeWorkspace.value.id;
+    const deletedImage = JSON.parse(JSON.stringify(activeWorkspace.value.images[index]));
     const nextPreviewImage = activeWorkspace.value.images[index + 1] ?? activeWorkspace.value.images[index - 1];
     activeWorkspace.value.images = activeWorkspace.value.images.filter((image) => image.id !== id);
     if (activePreviewId.value === id) {
@@ -1579,8 +1616,12 @@ function deleteImage(id: string, anchor?: HTMLElement): void {
       clearImagePreview();
     }
     persistNow();
-    scheduleImagePayloadDeletion(getImagePayloadId(deletedImage));
-    showBubble("deleteImage", feedbackAnchor, { hideCompanionAfter: true });
+    showDeleteUndo(getMessage("deleteImage", Math.random, state.language), feedbackAnchor, () => {
+      const workspace = state.workspaces.find((item) => item.id === workspaceId);
+      if (!workspace || workspace.images.some((item) => item.id === id)) return;
+      workspace.images.splice(Math.min(index, workspace.images.length), 0, deletedImage);
+      persistNow();
+    }, () => scheduleImagePayloadDeletion(getImagePayloadId(deletedImage)));
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
 }
 
@@ -1590,9 +1631,23 @@ function deleteFocusImage(id: string, anchor?: HTMLElement): void {
     const session = focusSession.value;
     const todo = focusTodo.value;
     if (!session || !todo) return;
-    const deleted = todo.focusImages?.find((item) => item.id === id);
-    replaceFocusImages({ period: session.period, id: session.id }, (list) => list.filter((item) => item.id !== id));
-    if (deleted) scheduleImagePayloadDeletion(getImagePayloadId(deleted));
+    const index = (todo.focusImages ?? []).findIndex((item) => item.id === id);
+    if (index < 0) return;
+    const deleted = JSON.parse(JSON.stringify(todo.focusImages![index]));
+    const workspaceId = activeWorkspace.value.id;
+    const period = session.period;
+    const todoId = session.id;
+    replaceFocusImages({ period, id: todoId }, (list) => list.filter((item) => item.id !== id));
+    showDeleteUndo(getMessage("deleteImage", Math.random, state.language), anchor, () => {
+      const workspace = state.workspaces.find((item) => item.id === workspaceId);
+      const target = workspace?.todos[period]?.find((item) => item.id === todoId);
+      if (!target) return;
+      const images = target.focusImages ?? [];
+      if (images.some((item) => item.id === id)) return;
+      images.splice(Math.min(index, images.length), 0, deleted);
+      target.focusImages = images;
+      persistNow();
+    }, () => scheduleImagePayloadDeletion(getImagePayloadId(deleted)));
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel, danger: true });
 }
 
@@ -1900,10 +1955,21 @@ function deleteQuickTagWithButtons(id: string, anchor?: HTMLElement): void {
   if (!tag) return;
   requestConfirmation("confirmDeleteQuickTagWithButtons", anchor, () => {
     if (activeWorkspace.value.quickTags.length <= 1) return;
+    const workspaceId = activeWorkspace.value.id;
+    const tagIndex = activeWorkspace.value.quickTags.findIndex((item) => item.id === id);
+    if (tagIndex < 0) return;
+    const removedTag = JSON.parse(JSON.stringify(activeWorkspace.value.quickTags[tagIndex]));
+    const removedButtons = activeWorkspace.value.quickButtons.map((item, index) => ({ item: JSON.parse(JSON.stringify(item)), index })).filter(({ item }) => item.tagId === id);
     activeWorkspace.value.quickTags = activeWorkspace.value.quickTags.filter((item) => item.id !== id);
     activeWorkspace.value.quickButtons = activeWorkspace.value.quickButtons.filter((button) => button.tagId !== id);
     persistNow();
-    showBubble("deleteQuickTagWithButtons", anchor, { hideCompanionAfter: true });
+    showDeleteUndo(getMessage("deleteQuickTagWithButtons", Math.random, state.language), anchor, () => {
+      const workspace = state.workspaces.find((item) => item.id === workspaceId);
+      if (!workspace || workspace.quickTags.some((item) => item.id === id)) return;
+      workspace.quickTags.splice(Math.min(tagIndex, workspace.quickTags.length), 0, removedTag);
+      for (const { item, index } of removedButtons) if (!workspace.quickButtons.some((button) => button.id === item.id)) workspace.quickButtons.splice(Math.min(index, workspace.quickButtons.length), 0, item);
+      persistNow();
+    });
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel, highlightTarget: getQuickTagGroupTargets(id, anchor) });
 }
 
@@ -1950,9 +2016,16 @@ function deleteQuick(id: string, anchor?: HTMLElement): void {
   requestConfirmation("confirmDeleteQuick", anchor, () => {
     const index = activeWorkspace.value.quickButtons.findIndex((button) => button.id === id);
     if (index < 0) return;
+    const workspaceId = activeWorkspace.value.id;
+    const removed = JSON.parse(JSON.stringify(activeWorkspace.value.quickButtons[index]));
     activeWorkspace.value.quickButtons = activeWorkspace.value.quickButtons.filter((button) => button.id !== id);
     persistNow();
-    showBubble("deleteQuick", anchor, { hideCompanionAfter: true });
+    showDeleteUndo(getMessage("deleteQuick", Math.random, state.language), anchor, () => {
+      const workspace = state.workspaces.find((item) => item.id === workspaceId);
+      if (!workspace || workspace.quickButtons.some((button) => button.id === id)) return;
+      workspace.quickButtons.splice(Math.min(index, workspace.quickButtons.length), 0, removed);
+      persistNow();
+    });
   }, undefined, { confirmText: uiText.value.common.delete, cancelText: uiText.value.common.cancel });
 }
 
@@ -2384,6 +2457,10 @@ function removeTodoList(listId: TodoListId, anchor?: HTMLElement): void {
   const index = activeWorkspace.value.todoLists.findIndex((list) => list.id === listId);
   if (index < 0 || activeWorkspace.value.todoLists.length <= 1) return;
   // 列删除连坐：整列 todo 的 focusImages 载荷随列表一起进宽限删除队列。
+  const workspaceId = activeWorkspace.value.id;
+  const removedList = JSON.parse(JSON.stringify(activeWorkspace.value.todoLists[index]));
+  const removedTodos = JSON.parse(JSON.stringify(getTodos(listId)));
+  const completedVisible = activeWorkspace.value.showCompletedTodos[listId];
   const doomedFocusIds = collectTodoFocusPayloadIds(getTodos(listId) ?? []);
   activeWorkspace.value.todoLists.splice(index, 1);
   const next = removeTodoListData(activeWorkspace.value.todos, activeWorkspace.value.showCompletedTodos, listId);
@@ -2392,8 +2469,15 @@ function removeTodoList(listId: TodoListId, anchor?: HTMLElement): void {
   clearEmptyTodoRemovalTimersForList(listId);
   if (pendingEditTodoListId.value === listId) pendingEditTodoListId.value = null;
   persistNow();
-  doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
-  showBubbleText(uiText.value.app.todoListDeleted, anchor, { hideCompanionAfter: true });
+  showDeleteUndo(uiText.value.app.todoListDeleted, anchor, () => {
+    const workspace = state.workspaces.find((item) => item.id === workspaceId);
+    if (!workspace || workspace.todoLists.some((item) => item.id === listId)) return;
+    workspace.todoLists.splice(Math.min(index, workspace.todoLists.length), 0, removedList);
+    workspace.todos[listId] = removedTodos;
+    if (completedVisible !== undefined) workspace.showCompletedTodos[listId] = completedVisible;
+    persistNow();
+    scheduleNextTodoNotification();
+  }, () => doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId)));
 }
 
 function updateTodoMaxColumns(count: number): void {
@@ -2602,13 +2686,30 @@ function updateTodoNotify(period: TodoPeriod, id: string, notifyAt: number | und
 
 function deleteTodoNow(period: TodoPeriod, id: string, anchor?: HTMLElement): boolean {
   if (!isConfiguredTodoListId(period)) return false;
-  if (getTodos(period).findIndex((todo) => todo.id === id) < 0) return false;
-  // 删除连坐：被删 todo 的 focusImages 载荷与单图删除同口径走 5 秒宽限（撤销可保住）。
-  const doomedFocusIds = collectTodoFocusPayloadIds(getTodos(period).filter((todo) => todo.id === id));
+  const index = getTodos(period).findIndex((todo) => todo.id === id);
+  if (index < 0) return false;
+  const workspaceId = activeWorkspace.value.id;
+  const deletedTodo = JSON.parse(JSON.stringify(getTodos(period)[index])) as TodoItem;
+  const doomedFocusIds = collectTodoFocusPayloadIds([deletedTodo]);
   activeWorkspace.value.todos = removeTodoFromMap(activeWorkspace.value.todos, period, id);
   persistNow();
-  doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
-  showBubble("deleteTodo", anchor, { hideCompanionAfter: true });
+  showBubble("deleteTodo", anchor, {
+    hideCompanionAfter: true,
+    keepPosition: true,
+    force: true,
+    actionText: uiText.value.imageEditor.undo,
+    onAction: () => {
+      const workspace = state.workspaces.find((item) => item.id === workspaceId);
+      if (!workspace || !workspace.todoLists.some((list) => list.id === period)) return;
+      const todos = workspace.todos[period] ?? [];
+      if (todos.some((todo) => todo.id === id)) return;
+      todos.splice(Math.min(index, todos.length), 0, deletedTodo);
+      workspace.todos[period] = todos;
+      persistNow();
+      scheduleNextTodoNotification();
+    },
+    onDismiss: () => doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId)),
+  });
   return true;
 }
 
@@ -3455,10 +3556,22 @@ function invalidateGuideCompanion(nextKey: GuideKey): void {
   hideCompanion();
 }
 
-// "Update now" from the changelog modal — close it, then run the same cache-clear + reload.
-async function applyChangelogUpdate(): Promise<void> {
-  changelogVisible.value = false;
-  await updateStaticVersion();
+async function manualCheckUpdate(): Promise<void> {
+  if (updateChecking.value) return;
+  updateChecking.value = true;
+  const checkingMessage = uiText.value.updateCheck.checking;
+  showBubbleText(checkingMessage, undefined, { explicit: true, hideCompanionAfter: true });
+  const startedAt = Date.now();
+  const latest = await checkLatestAppVersion();
+  const remaining = Math.max(0, 800 - (Date.now() - startedAt));
+  window.setTimeout(() => { updateChecking.value = false; }, remaining);
+  if (!appMounted) return;
+  if (versionPromptVisible.value) {
+    if (bubbleMessage.value === checkingMessage) hideBubbleMessage();
+    updateCheckVisible.value = true;
+  } else {
+    showBubbleText(latest ? uiText.value.updateCheck.current[Math.floor(Math.random() * uiText.value.updateCheck.current.length)] : uiText.value.updateCheck.failed, undefined, { explicit: true, hideCompanionAfter: true });
+  }
 }
 
 function getImageUndoAnchor(anchor?: HTMLElement): HTMLElement | undefined {
@@ -3640,6 +3753,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           :zone-visibility="activeWorkspace.zoneVisibility"
           :app-version="appVersion"
           :update-available="versionPromptVisible"
+          :update-checking="updateChecking"
           :companion-gif-theme="state.companionGifTheme"
           :custom-companion-gif="state.customCompanionGif"
           :has-custom-companion-gif="Boolean(state.customCompanionGif.light || state.customCompanionGif.dark || state.customCompanionGifStored.light || state.customCompanionGifStored.dark)"
@@ -3652,7 +3766,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @suggest="suggestIssue"
           @support="supportDialogVisible = true"
           @shortcut-help="shortcutHelpVisible = true"
-          @changelog="changelogVisible = true"
+          @check-update="manualCheckUpdate"
           @language="updateLanguage"
           @theme="(theme) => { state.theme = theme; hideCompanion(); }"
           @toggle-zone="toggleActiveWorkspaceZone"
@@ -3835,7 +3949,10 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <!-- 伴宠气泡（GIF + 消息）。 -->
     <CompanionBubble
       :visible="companionVisible"
+      :dismissing="companionDismissing"
+      :action-text="bubbleActionText"
       :message="bubbleMessage"
+      :sequence="bubbleSequence"
       :link-text="bubbleLink?.text"
       :link-href="bubbleLink?.href"
       :signature-text="bubbleSignature"
@@ -3855,6 +3972,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       @yes="confirmCompanionAction"
       @no="cancelCompanionAction"
       @secondary="secondaryCompanionAction"
+      @action="runBubbleAction"
       @pause="pauseBubbleTimer"
       @resume="resumeBubbleTimer"
       @gif-click="handleCompanionGifClick"
@@ -3863,15 +3981,13 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
     <input ref="importInput" type="file" accept="application/json,.json" hidden @change="importData" />
     <ShortcutHelp :show="shortcutHelpVisible" :language="state.language" @close="shortcutHelpVisible = false" />
     <SupportAuthor :show="supportDialogVisible" :language="state.language" @close="supportDialogVisible = false" />
-    <VersionHistory
-      :show="changelogVisible"
-      :language="state.language"
-      :update-available="versionPromptVisible"
-      :available-version="availableAppVersion"
-      :current-version="appVersion"
-      @close="changelogVisible = false"
-      @update="applyChangelogUpdate"
-    />
+    <NModal :show="updateCheckVisible" preset="card" class="update-check-modal" :title="uiText.updateCheck.title" style="width: min(400px, calc(100vw - 32px))" @update:show="(show: boolean) => { updateCheckVisible = show; }">
+      <p data-testid="update-check-status">{{ availableAppVersion !== appVersion ? uiText.updateCheck.available.replace("{version}", availableAppVersion) : uiText.updateCheck.ready }}</p>
+      <div class="dialog-actions" style="margin-top: 16px;">
+        <NButton data-testid="update-check-cancel" @click="updateCheckVisible = false">{{ uiText.common.cancel }}</NButton>
+        <NButton type="primary" data-testid="update-check-apply" @click="updateStaticVersion">{{ uiText.updateCheck.update }}</NButton>
+      </div>
+    </NModal>
     <NModal :show="importConflict !== null" preset="card" class="workspace-dialog-modal" :title="uiText.app.importConflictTitle" style="max-width: 440px; width: calc(100vw - 32px)" :mask-closable="false" @update:show="(show: boolean) => { if (!show) { importConflict?.cancel(); importConflict = null; } }">
       <template v-if="importConflict && importPreview">
         <p>{{ uiText.app.importConflictDescription }}</p>
@@ -3879,7 +3995,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <p v-if="importConflict.legacy">{{ uiText.app.importLegacyNotice }}</p>
         <NCheckbox v-if="importPreview.conflicts" v-model:checked="importCopyConflicts" data-testid="import-copy-conflicts">{{ uiText.app.importCopyConflicts }}</NCheckbox>
         <p v-if="importReplaceConfirm">{{ uiText.app.importReplaceWarning }}</p>
-        <div style="display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; margin-top:16px;">
+        <div class="dialog-actions" style="margin-top:16px;">
           <NButton data-testid="import-cancel" @click="importConflict.cancel(); importConflict = null">{{ uiText.common.cancel }}</NButton>
           <NButton data-testid="import-add" @click="() => { const pending = importConflict; importConflict = null; void pending?.add(); }">{{ uiText.app.importAddCopy }}</NButton>
           <NButton v-if="!importReplaceConfirm" data-testid="import-replace" @click="importReplaceConfirm = true">{{ uiText.app.importReplace }}</NButton>
@@ -3893,7 +4009,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       <div style="display: flex; flex-direction: column; gap: 12px; margin: 16px 0;">
         <NCheckbox v-for="zone in exportZoneKeys" :key="zone" :checked="exportZones.includes(zone)" :data-testid="`export-zone-${zone}`" @update:checked="(checked: boolean) => { exportZones = checked ? [...exportZones, zone] : exportZones.filter((item) => item !== zone); }">{{ uiText.app.exportZoneNames[zone] }}</NCheckbox>
       </div>
-      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+      <div class="dialog-actions">
         <NButton @click="exportWorkspaceId = null">{{ uiText.common.cancel }}</NButton>
         <NButton type="primary" data-testid="confirm-workspace-export" :disabled="exportZones.length === 0" @click="confirmWorkspaceExport">{{ uiText.common.confirm }}</NButton>
       </div>
@@ -3915,7 +4031,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           <span>{{ uiText.app.workspaceSlogan }}</span>
           <NInput v-model:value="workspaceDraftSlogan" :placeholder="uiText.app.workspaceSloganPlaceholder" />
         </label>
-        <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <div class="dialog-actions">
           <NButton @click="workspaceDialogVisible = false">{{ uiText.common.cancel }}</NButton>
           <NButton type="primary" :disabled="!workspaceDraftTitle.trim()" @click="confirmWorkspaceDialog">{{ uiText.common.confirm }}</NButton>
         </div>

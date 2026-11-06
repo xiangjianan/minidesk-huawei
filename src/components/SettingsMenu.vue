@@ -13,6 +13,7 @@ import {
   KeyRound as KeyOutline,
   Database as ServerOutline,
   Settings as SettingsOutline,
+  RefreshCw as RefreshOutline,
   Sun,
   Moon,
   LayoutGrid as GridOutline,
@@ -30,6 +31,7 @@ import { renderIcon } from "../utils/dropdownIcons";
 const props = withDefaults(defineProps<{
   appVersion: string;
   updateAvailable: boolean;
+  updateChecking?: boolean;
   companionGifTheme: CompanionGifTheme;
   customCompanionGif?: CompanionCustomGif;
   hasCustomCompanionGif?: boolean;
@@ -53,7 +55,7 @@ const emit = defineEmits<{
   suggest: [anchor?: HTMLElement];
   support: [anchor?: HTMLElement];
   shortcutHelp: [];
-  changelog: [];
+  checkUpdate: [];
   language: [language: AppLanguage, anchor?: HTMLElement];
   theme: [theme: ThemeMode];
   toggleZone: [zone: ZoneKey];
@@ -152,17 +154,19 @@ const options = computed(() => [
   {
     label: () =>
       h("span", { class: "settings-version-item", "data-testid": "settings-version" }, [
-        h("span", `v${props.appVersion}`),
+        h("span", { class: "settings-version-check" }, text.value.settings.checkUpdate),
+        h("span", { class: "settings-version-number" }, `v${props.appVersion}`),
         props.updateAvailable
-          ? h("span", { class: "settings-version-badge" }, text.value.settings.updateAvailable)
+          ? h("span", { class: "settings-version-badge", role: "img", "aria-label": text.value.settings.updateAvailable })
           : null,
       ]),
     key: "version",
+    icon: () => h(NIcon, { size: 16 }, { default: () => h(RefreshOutline, { class: { "settings-update-spinning": props.updateChecking } }) }),
   },
 ]);
 
 function handleSelect(key: string): void {
-  keepOpenAfterPreferenceSelect = key.startsWith("gif-theme:") && key !== "gif-theme:custom";
+  keepOpenAfterPreferenceSelect = key === "about" || key === "version" || (key.startsWith("gif-theme:") && key !== "gif-theme:custom");
   if (!keepOpenAfterPreferenceSelect) menuOpen.value = false;
   if (key === "create-workspace") emit("createWorkspace");
   if (key === "export-workspace") emit("exportWorkspace", triggerRef.value ?? undefined);
@@ -176,7 +180,7 @@ function handleSelect(key: string): void {
     return;
   }
   if (key === "version") {
-    emit("changelog");
+    emit("checkUpdate");
     return;
   }
   if (key.startsWith("language:")) {

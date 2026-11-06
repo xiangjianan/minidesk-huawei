@@ -434,6 +434,8 @@ describe("workbench style contract", () => {
     expect(styles).not.toMatch(/\.todo-section:first-child \.todo-heading\s*\{[^}]*border-top/);
   });
 
+
+
   it("keeps single-row large buttons and bounds wrapping text pills", () => {
     const desk = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
     expectSelectorBody(desk, ".workbench-shell button.quick-button", "min-height: 44px");

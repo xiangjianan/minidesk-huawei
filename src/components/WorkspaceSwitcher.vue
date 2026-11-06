@@ -187,6 +187,7 @@ onUnmounted(() => disposeSort?.());
     :show="open"
     :width="264"
     :to="false"
+    :show-arrow="false"
     class="workspace-switcher-popover"
   >
     <template #trigger>

@@ -71,6 +71,21 @@ describe("SpacePanel", () => {
   });
 
 
+  it("opens the menu across the heading row but excludes the paste button", async () => {
+    const wrapper = mountSpacePanel([{ id: "note", title: "笔记", lines: [] }]);
+    await wrapper.get(".header-actions").trigger("contextmenu");
+    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    await wrapper.get(".space-paste-button").trigger("contextmenu");
+    expect(wrapper.find(".dropdown-option").exists()).toBe(false);
+    await wrapper.get(".desk-zone-heading").trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option")).toHaveLength(3);
+    await wrapper.get('[data-key="guide"]').trigger("click");
+    await wrapper.get(".desk-zone-heading h2").trigger("contextmenu");
+    expect(wrapper.findAll(".dropdown-option")).toHaveLength(3);
+    wrapper.unmount();
+  });
+
+
   it("appends heading paste to the active notebook without replacing selected text", async () => {
     Object.assign(navigator, { clipboard: { readText: vi.fn().mockResolvedValue("追加文字"), writeText: vi.fn() } });
     const wrapper = mountSpacePanel([
@@ -84,7 +99,7 @@ describe("SpacePanel", () => {
     await flushPromises();
     const update = wrapper.emitted("update")?.at(-1);
     expect(update?.[0]).toBe("note");
-    expect((update?.[1] as { text: string }[]).map(line => line.text).join("\n")).toBe("原文追加文字");
+    expect((update?.[1] as { text: string }[]).map(line => line.text).join("\n")).toBe("原文\n追加文字");
     wrapper.unmount();
   });
 

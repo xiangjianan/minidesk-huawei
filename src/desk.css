@@ -58,8 +58,8 @@ html[data-theme="dark"] .workbench-shell,
 
 .workbench-command-bar {
   position: relative;
-  padding-inline: 24px;
-  padding-inline-start: 16px;
+  padding-inline: 10px;
+  padding-inline-start: 8px;
   background: var(--card);
   -webkit-backdrop-filter: blur(20px) saturate(1.3);
   backdrop-filter: blur(20px) saturate(1.3);
@@ -556,6 +556,8 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 .workbench-shell .today-focus-heading { display: flex; align-items: center; gap: 8px; }
 .workbench-shell .today-focus-title-icon { flex: 0 0 auto; font-size: 16px; }
 
+
+
 /* Region headings are controls rather than selectable document text. */
 .desk-zone-heading h1,
 .desk-zone-heading h2 { user-select: none; -webkit-user-select: none; }
@@ -645,6 +647,7 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   pointer-events: auto;
 }
 .workbench-shell .workbench-title-group { max-width: calc(50% - 48px); }
+.workbench-shell .workbench-title-group .save-status { margin-inline-start: -12px; }
 .workbench-shell .workbench-command-actions { margin-inline-start: auto; }
 /* Only the button footprint should trigger reveal, not the surrounding header. */
 .workbench-shell .workbench-header-reveal-zone {
@@ -747,7 +750,7 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 }
 .workbench-shell .workspace-trigger:hover,
 .workbench-shell .workspace-trigger:active,
-.workbench-shell .workspace-trigger:focus-visible { background: var(--secondary); box-shadow: none; }
+.workbench-shell .workspace-trigger:focus-visible { background: transparent; box-shadow: none; }
 @media (prefers-reduced-motion: reduce) {
   .workbench-shell .icon-button,
 .workbench-shell .workspace-trigger,
@@ -1056,11 +1059,13 @@ html[data-theme="dark"] .workbench-shell .quick-tag-group[style*="--quick-list-c
 html[data-theme="dark"] .workbench-shell .quick-tag-group[style*="--quick-list-color"] button.quick-button:focus-visible {
   background: color-mix(in srgb, var(--quick-list-color) 38%, var(--card)) !important;
 }
-.quick-list-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0; border: 0; margin: 0; }
+.quick-list-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 28px 8px; padding: 0 0 22px; border: 0; margin: 0; }
 .quick-list-colors legend { margin-bottom: 8px; }
+.quick-list-dialog .dialog-actions { justify-content: flex-end; }
 .quick-list-colors .quick-color-swatch, .quick-list-colors .quick-color-none { width: 28px; height: 28px; min-width: 28px; padding: 0; border: 1px solid var(--line-subtle); border-radius: 50%; }
 .quick-list-colors .selected { outline: 2px solid var(--text); outline-offset: 2px; }
-.quick-color-custom { display: inline-flex; align-items: center; gap: 4px; }
+.quick-color-custom { position: relative; display: inline-flex; align-items: center; height: 28px; }
+.quick-color-custom-label { position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%); white-space: nowrap; }
 /* Use the same mixed color as an actual quick button, including in dark mode. */
 .quick-list-colors .quick-color-swatch, .quick-color-custom-preview {
   background: color-mix(in srgb, var(--quick-list-color) 18%, var(--card));
