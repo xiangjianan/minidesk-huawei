@@ -113,17 +113,12 @@ describe("TodoFocusModal", () => {
     expect(wrapper.emitted("notesUpdate")?.[0]).toEqual([[{ text: "新", indent: 0 }]]);
   });
 
-  it("「添加图片」按钮存在且文件选择上抛 dropImageFiles", async () => {
+  it("顶部按钮从剪贴板粘贴图片到列表末尾", async () => {
     const wrapper = mountModal();
-    expect(wrapper.get(".focus-now-add-image").text()).toContain("添加图片");
-
-    const input = wrapper.get("input[type=file]");
-    const file = new File(["x"], "a.png", { type: "image/png" });
-    Object.defineProperty(input.element, "files", { value: [file] });
-    await input.trigger("change");
-    expect(wrapper.emitted("dropImageFiles")?.[0]).toEqual([[file]]);
-    // 选择后重置 input，便于连续添加。
-    expect((input.element as HTMLInputElement).value).toBe("");
+    const button = wrapper.get(".focus-now-add-image");
+    expect(button.text()).toContain("粘贴图片");
+    await button.trigger("click");
+    expect(wrapper.emitted("pasteImage")?.[0]).toEqual([{ placement: "append", anchor: button.element }]);
     wrapper.unmount();
   });
 

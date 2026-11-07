@@ -37,6 +37,7 @@ const emit = defineEmits<{
   /** 关闭（=暂停）：App 计算并合并本次增量到任务的 focusElapsedMs（单一事实源在 App 的 focusSession）。 */
   close: [];
   notesUpdate: [lines: LineItem[]];
+  notesBlur: [];
   pasteImage: [request: ImagePasteRequest];
   dropImageFiles: [files: File[], targetId?: string];
   copyImage: [id: string];
@@ -85,7 +86,7 @@ const displayDurationIso = computed(() => `PT${Math.ceil(displayMs.value / 1000)
 //    saveImage 上抛 App、关预览是收浮层而非撤全屏。 ——
 const activePreviewId = ref<string>();
 const editorActive = ref(false);
-const imageFileInput = ref<HTMLInputElement>();
+const pasteButtonRef = ref<HTMLButtonElement>();
 const previewRef = ref<HTMLElement>();
 const previewImageRef = ref<HTMLImageElement>();
 const editorRef = ref<InstanceType<typeof ImageEditor> | null>(null);
@@ -141,14 +142,6 @@ watch(activeIndex, (index) => {
 function clearPreview(): void {
   activePreviewId.value = undefined;
   editorActive.value = false;
-}
-
-/** 「添加图片」：原生文件选择 → 上抛 dropImageFiles（App 落 focusImages，同拖放链路）。 */
-function handleImageFilesPicked(event: Event): void {
-  const input = event.target as HTMLInputElement;
-  const files = Array.from(input.files ?? []);
-  input.value = "";
-  if (files.length) emit("dropImageFiles", files);
 }
 
 function enterEditor(): void {
@@ -347,25 +340,18 @@ function handleModalShow(value: boolean): void {
         <aside class="focus-now-images" :aria-label="uiText.todo.focusImagesLabel">
           <div class="focus-now-images-toolbar">
             <button
+              ref="pasteButtonRef"
               class="focus-now-add-image"
               type="button"
               :aria-label="uiText.todo.focusAddImage"
               :title="uiText.todo.focusAddImage"
-              @click="imageFileInput?.click()"
+              @click="emit('pasteImage', { placement: 'append', anchor: pasteButtonRef })"
             >
               <NIcon size="14" aria-hidden="true">
                 <AddOutline />
               </NIcon>
               {{ uiText.todo.focusAddImage }}
             </button>
-            <input
-              ref="imageFileInput"
-              type="file"
-              accept="image/*"
-              multiple
-              hidden
-              @change="handleImageFilesPicked"
-            />
           </div>
           <ImagePanel
             :title="uiText.todo.focusImagesLabel"
@@ -395,6 +381,7 @@ function handleModalShow(value: boolean): void {
             :language="language"
             hide-header
             @update="(lines: LineItem[]) => emit('notesUpdate', lines)"
+            @blur="emit('notesBlur')"
           />
           <div
             v-if="activePreviewId"

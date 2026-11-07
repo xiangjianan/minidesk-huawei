@@ -6051,6 +6051,48 @@ describe("App shell", () => {
     }
   });
 
+  it("接收其他窗口更新时同步专注笔记并重新载入图片", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
+    await storeImagePayload({ id: "focus-image", src: "data:image/png;base64,Zm9v", createdAt: 1 });
+    const workspace = defaultWorkspace();
+    workspace.todos = { morning: [{ id: "t1", text: "任务", done: false, focusNotes: [{ text: "旧笔记", indent: 0 }], focusImages: [{ id: "focus-image", createdAt: 1 }] }] };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ sync: { revision: 1, clientId: "a" }, workspaces: [workspace] }));
+    const wrapper = mountApp();
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
+      await flushPromises();
+      const originalRow = wrapper.getComponent(TodoPanel).props("todos").morning[0];
+      const newer = structuredClone(workspace);
+      newer.todos.morning[0].focusNotes = [{ text: "另一窗口的笔记", indent: 0 }];
+      const raw = JSON.stringify({ sync: { revision: 2, clientId: "b" }, workspaces: [newer] });
+      localStorage.setItem(STORAGE_KEY, raw);
+      window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: raw }));
+      await vi.waitFor(() => {
+        const modal = wrapper.getComponent(TodoFocusModal);
+        expect(wrapper.getComponent(TodoPanel).props("todos").morning[0]).toBe(originalRow);
+        expect(modal.get("textarea").element.value).toBe("另一窗口的笔记");
+        expect(modal.props("images")[0].src).toBe("data:image/png;base64,Zm9v");
+      });
+    } finally {
+      wrapper.unmount();
+      restoreIndexedDb();
+    }
+  });
+
+  it("专注笔记失焦立即保存，供其他窗口同步", async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ todos: { morning: [{ id: "t1", text: "任务", done: false }] } }));
+    const wrapper = mountApp();
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
+      await flushPromises();
+      const input = wrapper.getComponent(TodoFocusModal).get("textarea");
+      await input.trigger("click");
+      await input.setValue("立即同步");
+      await input.trigger("blur");
+      expect(loadState().workspaces[0].todos.morning[0].focusNotes).toEqual([{ text: "立即同步", indent: 0 }]);
+    } finally { wrapper.unmount(); }
+  });
+
   it("专注弹窗内 TextPanel 笔记写入 focusNotes 并经文本防抖落盘", async () => {
     vi.useFakeTimers();
     localStorage.setItem(
@@ -6067,7 +6109,8 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       const modal = wrapper.getComponent(TodoFocusModal);
-      modal.getComponent(TextPanel).vm.$emit("update", [{ text: "随手记第一条", indent: 0 }]);
+      await modal.get("textarea").trigger("click");
+      await modal.get("textarea").setValue("随手记第一条");
       await wrapper.vm.$nextTick();
 
       // 3s 文本防抖到点冲刷：focusNotes 落进 localStorage。

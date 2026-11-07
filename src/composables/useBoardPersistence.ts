@@ -171,7 +171,7 @@ export function useBoardPersistence(deps: BoardPersistenceDeps) {
   }
 
   function hasUnsavedLocalChanges(): boolean {
-    return textEditGeneration !== savedTextGeneration || saveStatus.value !== "saved";
+    return textEditGeneration !== savedTextGeneration || saveStatus.value === "dirty";
   }
 
   /** True while a debounced edit has not been persisted yet (beforeunload flush). */

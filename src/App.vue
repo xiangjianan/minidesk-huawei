@@ -1242,8 +1242,41 @@ async function applyExternalStoredState(raw?: string): Promise<void> {
     const activeExternal = nextState.workspaces.find((w) => w.id === nextState.activeWorkspaceId) ?? nextState.workspaces[0];
     if (activeExternal) {
       activeExternal.images = await hydrateStoredImages(activeExternal.images);
+      const session = focusSession.value;
+      if (session) {
+        const todo = activeExternal.todos[session.period]?.find((item) => item.id === session.id);
+        if (todo?.focusImages?.length) {
+          todo.focusImages = await hydrateStoredImages(todo.focusImages);
+        }
+      }
     }
-    if (!appMounted) return;
+    // 异步读取图片期间可能已收到更新版本或产生本地输入。
+    if (!appMounted || nextState.sync.revision <= state.sync.revision || hasUnsavedLocalChanges()) return;
+    // 同步笔记时保留未变化的提醒列表，避免无关状态替换触发布局动画。
+    for (const incoming of nextState.workspaces) {
+      const current = state.workspaces.find((workspace) => workspace.id === incoming.id);
+      if (!current) continue;
+      if (JSON.stringify(incoming.todoLists) === JSON.stringify(current.todoLists)) {
+        incoming.todoLists = current.todoLists;
+      }
+      for (const listId of Object.keys(incoming.todos)) {
+        const nextTodos = incoming.todos[listId];
+        const currentTodos = current.todos[listId];
+        if (!currentTodos || nextTodos.length !== currentTodos.length) continue;
+        const rowData = (todo: TodoItem) => {
+          const { focusNotes, focusImages, ...visible } = todo;
+          return visible;
+        };
+        if (!nextTodos.every((todo, index) => JSON.stringify(rowData(todo)) === JSON.stringify(rowData(currentTodos[index])))) continue;
+        // Notes and image payloads do not affect reminder rows. Keep their
+        // objects stable so TransitionGroup does not run FLIP for a note edit.
+        nextTodos.forEach((todo, index) => {
+          currentTodos[index].focusNotes = todo.focusNotes;
+          currentTodos[index].focusImages = todo.focusImages;
+        });
+        incoming.todos[listId] = currentTodos;
+      }
+    }
     Object.assign(state, nextState);
     resetTextGenerationBaseline();
     applyTheme();
@@ -3937,6 +3970,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :language="state.language"
       @close="closeFocusNow"
       @notes-update="(lines) => focusSession && updateFocusNotes(focusSession.period, focusSession.id, lines)"
+      @notes-blur="handleEditorBlur"
       @paste-image="(request) => focusSession && pasteImageFromClipboard(request, { period: focusSession.period, id: focusSession.id })"
       @drop-image-files="(files, targetId) => focusSession && addImageFiles(files, undefined, targetId, { period: focusSession.period, id: focusSession.id })"
       @copy-image="copyFocusImage"
