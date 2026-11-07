@@ -4,6 +4,7 @@ import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, react
 import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NCheckbox, NConfigProvider, NGlobalStyle, NInput, NModal, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
 import ImagePanel from "./components/ImagePanel.vue";
+import ImagePreview from "./components/ImagePreview.vue";
 import MobileHome from "./components/MobileHome.vue";
 import QuickButtons from "./components/QuickButtons.vue";
 import SettingsMenu from "./components/SettingsMenu.vue";
@@ -88,7 +89,6 @@ import type { ImagePlacementHint, ImageReplacementHint, SaveScope } from "./stat
 import { appendContinuingListFormat } from "./utils/textEditor";
 import type { AppLanguage, BoardState, CompanionGifTheme, DraggedTodo, GuideKey, ImagePasteFeedback, ImagePasteRequest, LineItem, QuickApiBodyType, QuickApiHeader, QuickApiMethod, QuickButton, QuickButtonType, StoredImage, TodoItem, TodoListConfig, TodoListId, TodoPeriod, TodoStarChange, WorkspaceData, WorkspaceMoveTarget, WorkspaceSpace, ZoneKey } from "./types";
 
-const ImagePreview = defineAsyncComponent(() => import("./components/ImagePreview.vue"));
 const ShortcutHelp = defineAsyncComponent(() => import("./components/ShortcutHelp.vue"));
 const SupportAuthor = defineAsyncComponent(() => import("./components/SupportAuthor.vue"));
 
@@ -3967,10 +3967,12 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :base-ms="focusBaseMs"
       :notes="focusTodo?.focusNotes ?? []"
       :images="focusTodo?.focusImages ?? []"
+      :initial-image-width="focusTodo?.focusImageWidth"
       :language="state.language"
       @close="closeFocusNow"
       @notes-update="(lines) => focusSession && updateFocusNotes(focusSession.period, focusSession.id, lines)"
       @notes-blur="handleEditorBlur"
+      @image-width-update="(width) => { if (focusSession) { activeWorkspace.todos = updateTodoFocus(activeWorkspace.todos, focusSession.period, focusSession.id, { focusImageWidth: width }); markDirty({ recordCheckpoint: false }); persistNow('all', { recordCheckpoint: false }); } }"
       @paste-image="(request) => focusSession && pasteImageFromClipboard(request, { period: focusSession.period, id: focusSession.id })"
       @drop-image-files="(files, targetId) => focusSession && addImageFiles(files, undefined, targetId, { period: focusSession.period, id: focusSession.id })"
       @copy-image="copyFocusImage"

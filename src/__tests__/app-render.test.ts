@@ -239,10 +239,10 @@ describe("App shell", () => {
     expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).toContain("MiniDesk");
     expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).not.toContain("搜索或执行命令");
     expect(wrapper.find('[data-testid="workbench-command-bar"]').text()).not.toContain("⌘K");
-    expect(wrapper.get(".workbench-zone-assets").attributes("aria-label")).toBe("🎨 贴图");
-    expect(wrapper.get(".workbench-zone-notes").attributes("aria-label")).toBe("⚡ 快捷动作");
-    expect(wrapper.get(".workbench-zone-tasks").attributes("aria-label")).toBe("✅ 提醒事项");
-    expect(wrapper.get(".workbench-zone-workspace").attributes("aria-label")).toBe("📝 便签");
+    expect(wrapper.get(".workbench-zone-assets").attributes("aria-label")).toBe("贴图");
+    expect(wrapper.get(".workbench-zone-notes").attributes("aria-label")).toBe("快捷动作");
+    expect(wrapper.get(".workbench-zone-tasks").attributes("aria-label")).toBe("提醒事项");
+    expect(wrapper.get(".workbench-zone-workspace").attributes("aria-label")).toBe("记事本");
     expect(wrapper.find('[aria-label="MiniDesk"]').exists()).toBe(false);
     expect(wrapper.text()).toContain("贴图");
     expect(wrapper.text()).toContain("快捷动作");

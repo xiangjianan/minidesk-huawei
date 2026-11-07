@@ -104,8 +104,8 @@ export const DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, stri
 // those have a single editable heading; tasks and workspace hold multiple lists
 // or spaces, so they use a fixed label.
 export const WORKBENCH_COLLAPSED_FIXED_LABELS_BY_LANGUAGE: Record<AppLanguage, { tasks: string; workspace: string }> = {
-  zh: { tasks: "✅ 提醒事项", workspace: "📝 便签" },
-  en: { tasks: "✅ Reminders", workspace: "📝 Sticky" },
+  zh: { tasks: "提醒事项", workspace: "记事本" },
+  en: { tasks: "Reminders", workspace: "Notebook" },
 };
 
 export const LEGACY_DEFAULT_TITLES_BY_LANGUAGE: Record<AppLanguage, Record<string, string>> = {
@@ -675,6 +675,7 @@ export const UI_TEXT = {
       todayFocus: "今日重点",
       focusNow: "现在做这个",
       focusDoing: "正在做",
+      focusTitlePrefix: "现在做这个：",
       focusTimer: "专注计时",
       focusElapsed: "已进行",
       focusClosePause: "关闭并暂停计时",
@@ -1010,6 +1011,7 @@ export const UI_TEXT = {
       todayFocus: "Pinned reminders",
       focusNow: "Do it now",
       focusDoing: "Now doing",
+      focusTitlePrefix: "Do this now: ",
       focusTimer: "Focus timer",
       focusElapsed: "Elapsed",
       focusClosePause: "Close and pause the timer",

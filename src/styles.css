@@ -6243,7 +6243,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 .focus-now-modal.n-card {
   width: 90vw !important;
   max-width: 90vw !important;
-  background: var(--background) !important;
+  background: var(--desk-surface) !important;
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius) !important;
@@ -6353,8 +6353,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 .focus-now-body {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: minmax(120px, 15%) minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: minmax(44px, min(var(--focus-image-width, 15%), calc(100% - 56px))) 12px minmax(44px, 1fr);
   min-height: 0;
 }
 
@@ -6369,35 +6368,6 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   background: var(--card);
 }
 
-/* 贴图条顶部「添加图片」：15% 宽窄条里占满一行的主行动按钮（左图右文提示的左半）。 */
-.focus-now-images-toolbar {
-  flex: none;
-  padding: 8px;
-  border-bottom: 1px solid var(--line-subtle);
-}
-
-.focus-now-add-image {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  width: 100%;
-  padding: 6px 8px;
-  border: 1px solid var(--line-subtle);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.focus-now-add-image:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-}
-
 .focus-now-images .image-panel {
   flex: 1 1 auto;
   min-height: 0;
@@ -6405,21 +6375,42 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   border-right: 0;
 }
 
-/* 10% 宽贴图条：卡片收成单列缩略——28px 序号列会把图挤没，序号信息由
-   预览的上一张/下一张承担；缩略高度也随条宽收紧。 */
-.focus-now-images .image-card {
-  grid-template-columns: minmax(0, 1fr);
+.focus-now-divider {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
 }
 
-.focus-now-images .image-index {
-  display: none;
+.focus-now-divider::before {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 3px; height: 88px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background: transparent;
 }
-
-.focus-now-images .image-card img,
-.focus-now-images .image-drag-preview img {
-  max-height: 88px;
-  margin: 6px;
+.focus-now-divider:hover::before,
+.focus-now-divider:focus-visible::before {
+  background: color-mix(in srgb, var(--muted) 24%, transparent);
 }
+.focus-now-divider::after {
+  content: "‹ ›";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  color: var(--muted);
+  font-size: 20px;
+  opacity: 0;
+  pointer-events: none;
+}
+.focus-now-divider:hover::after,
+.focus-now-divider:focus-visible::after,
+.focus-now-divider:active::after { opacity: 0.7; }
 
 .focus-now-notes {
   position: relative;
@@ -6450,6 +6441,16 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   z-index: 1;
 }
 
+/* Match the workbench preview's surface and photo timing. */
+.focus-preview-enter-active { animation: image-preview-in 120ms ease-out; }
+.focus-preview-leave-active {
+  pointer-events: none;
+  animation: image-preview-out 220ms ease-in forwards;
+}
+.focus-preview-leave-active .preview-stage img {
+  animation: image-preview-photo-out 220ms ease-in forwards;
+}
+
 .focus-now-preview-stage {
   flex: 1 1 auto;
   min-height: 0;
@@ -6468,10 +6469,6 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
 }
 
 @media (max-width: 940px) {
-  .focus-now-body {
-    grid-template-columns: 96px minmax(0, 1fr);
-  }
-
   .focus-now-timer {
     font-size: 14px;
   }
@@ -6592,3 +6589,76 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   opacity: 0 !important;
   transform: translateY(8px) scale(0.96) !important;
 }
+
+/* The focus split follows the workbench: a single rule and a centered handle. */
+.focus-now-images {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.focus-now-images-rail { display: none; }
+.focus-now-images.is-collapsed { visibility: visible; }
+.focus-now-images.is-collapsed > :not(.focus-now-images-rail) { display: none; }
+.focus-now-images.is-collapsed > .focus-now-images-rail {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  flex-direction: row;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+.focus-now-images-rail .n-icon { writing-mode: horizontal-tb; font-size: 16px; }
+button.focus-now-divider {
+  width: 12px;
+  min-width: 0;
+  z-index: 2;
+  cursor: col-resize;
+  border-radius: 0;
+  overflow: visible;
+}
+.focus-now-divider::before {
+  top: 0;
+  width: 1px;
+  height: 100%;
+  border-radius: 0;
+  transform: translateX(-50%);
+  background: var(--line-subtle);
+}
+.focus-now-divider:hover::before,
+.focus-now-divider:focus-visible::before,
+.focus-now-divider:active::before {
+  width: 3px;
+  background: linear-gradient(to bottom,
+    var(--line-subtle) 0 calc(50% - 44px),
+    color-mix(in srgb, var(--muted) 24%, transparent) calc(50% - 44px) calc(50% + 44px),
+    var(--line-subtle) calc(50% + 44px) 100%);
+}
+.focus-now-divider::after { text-align: center; line-height: 20px; }
+.focus-now-notes { border: 0; border-radius: 0; padding: 0 18px 16px; background: transparent; }
+.focus-now-notes .text-panel { flex: 1 1 auto; min-height: 0; height: auto; background: var(--card); border-radius: 12px; overflow: hidden; }
+.focus-now-images:not(.is-collapsed) { padding: 0 18px 16px; }
+
+.focus-now-notes.is-collapsed { padding: 0; }
+.focus-now-notes-rail {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.focus-now-notes-rail .n-icon { writing-mode: horizontal-tb; font-size: 16px; }

@@ -222,6 +222,7 @@ export interface TodoFocusPatch {
   /** 整体替换；空数组删除字段。 */
   focusNotes?: LineItem[];
   focusImages?: StoredImage[];
+  focusImageWidth?: number;
 }
 
 /** 「现在做这个」状态迁移：时长增量合并、笔记/图片整体替换，字段按需存在。 */
@@ -246,6 +247,9 @@ export function updateTodoFocus(
   if (patch.focusImages !== undefined) {
     if (patch.focusImages.length) todo.focusImages = patch.focusImages;
     else delete todo.focusImages;
+  }
+  if (patch.focusImageWidth !== undefined && Number.isFinite(patch.focusImageWidth)) {
+    todo.focusImageWidth = Math.max(0, Math.min(100, patch.focusImageWidth));
   }
   return next;
 }

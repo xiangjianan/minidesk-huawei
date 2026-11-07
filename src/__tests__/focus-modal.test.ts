@@ -44,9 +44,51 @@ describe("TodoFocusModal", () => {
     vi.useRealTimers();
   });
 
+  it("通过拖拽和方向键调整图片区域宽度，并限制范围", async () => {
+    const wrapper = mountModal();
+    const body = wrapper.get(".focus-now-body");
+    vi.spyOn(body.element, "getBoundingClientRect").mockReturnValue({ left: 100, width: 1000 } as DOMRect);
+    const divider = wrapper.get(".focus-now-divider");
+    expect(divider.attributes("aria-valuenow")).toBe("15");
+    divider.element.dispatchEvent(new MouseEvent("pointerdown", { button: 0, clientX: 350, bubbles: true }));
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 600 }));
+    await nextTick();
+    expect(divider.attributes("aria-valuenow")).toBe("50");
+    window.dispatchEvent(new Event("pointerup"));
+    await divider.trigger("keydown", { key: "ArrowRight" });
+    expect(divider.attributes("aria-valuenow")).toBe("52");
+    divider.element.dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true }));
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 2000 }));
+    await nextTick();
+    expect(divider.attributes("aria-valuenow")).toBe("94");
+    expect(wrapper.get(".focus-now-notes").classes()).toContain("is-collapsed");
+    expect(wrapper.get(".focus-now-notes-rail").text()).toBe("记事本");
+    await wrapper.get(".focus-now-notes-rail").trigger("click");
+    expect(divider.attributes("aria-valuenow")).toBe("15");
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 0 }));
+    await nextTick();
+    expect(divider.attributes("aria-valuenow")).toBe("4");
+    expect(wrapper.get(".focus-now-images").classes()).toContain("is-collapsed");
+    await wrapper.get(".focus-now-images-rail").trigger("click");
+    expect(divider.attributes("aria-valuenow")).toBe("15");
+    wrapper.unmount();
+  });
+
+  it("重新打开不同事项时加载各自的比例", async () => {
+    const wrapper = mountModal({ initialImageWidth: 32 });
+    expect(wrapper.get(".focus-now-divider").attributes("aria-valuenow")).toBe("32");
+    await wrapper.setProps({ show: false, initialImageWidth: undefined });
+    await wrapper.setProps({ show: true });
+    expect(wrapper.get(".focus-now-divider").attributes("aria-valuenow")).toBe("15");
+    await wrapper.setProps({ show: false, initialImageWidth: 32 });
+    await wrapper.setProps({ show: true });
+    expect(wrapper.get(".focus-now-divider").attributes("aria-valuenow")).toBe("32");
+    wrapper.unmount();
+  });
+
   it("渲染任务标题与初始累计计时（h:mm:ss）", () => {
     const wrapper = mountModal();
-    expect(wrapper.text()).toContain("写周报");
+    expect(wrapper.get(".focus-now-title").text()).toBe("现在做这个：写周报");
     expect(wrapper.get(".focus-now-timer-label").text()).toBe("已进行");
     expect(wrapper.find(".focus-now-timer").text()).toBe("0:12:34"); // 754s → 12.5 分钟向下取整
   });
@@ -69,6 +111,7 @@ describe("TodoFocusModal", () => {
 
   it("从零开始每秒递增，英文界面也显示累计时长", async () => {
     const wrapper = mountModal({ baseMs: 0, language: "en" });
+    expect(wrapper.get(".focus-now-title").text()).toBe("Do this now: 写周报");
     expect(wrapper.get(".focus-now-timer-label").text()).toBe("Elapsed");
     expect(wrapper.get(".focus-now-timer").text()).toBe("0:00:00");
     vi.advanceTimersByTime(1000);
@@ -113,19 +156,12 @@ describe("TodoFocusModal", () => {
     expect(wrapper.emitted("notesUpdate")?.[0]).toEqual([[{ text: "新", indent: 0 }]]);
   });
 
-  it("顶部按钮从剪贴板粘贴图片到列表末尾", async () => {
-    const wrapper = mountModal();
-    const button = wrapper.get(".focus-now-add-image");
-    expect(button.text()).toContain("粘贴图片");
-    await button.trigger("click");
-    expect(wrapper.emitted("pasteImage")?.[0]).toEqual([{ placement: "append", anchor: button.element }]);
-    wrapper.unmount();
-  });
-
-  it("ImagePanel hideHeader 渲染且 paste 事件上抛", async () => {
+  it("贴图标题和粘贴事件复用 ImagePanel", async () => {
     const wrapper = mountModal({ images: [{ id: "i1", createdAt: 1 }] });
     const imagePanel = wrapper.findComponent({ name: "ImagePanel" });
-    expect(imagePanel.props("hideHeader")).toBe(true);
+    expect(imagePanel.props("hideHeader")).toBeFalsy();
+    expect(imagePanel.props("headerId")).toBe("focus-now-image-title");
+    expect(wrapper.get(".focus-now-notes-header").text()).toContain("记事本");
     imagePanel.vm.$emit("paste", { placement: "append" });
     await nextTick();
     expect(wrapper.emitted("pasteImage")).toHaveLength(1);
@@ -273,6 +309,28 @@ describe("TodoFocusModal", () => {
     pressKey("s");
     await nextTick();
     expect(img().attributes("src")).toBe("data:image/png;base64,BBB");
+    wrapper.unmount();
+  });
+
+  it("方向键切换预览图片并在边界保持当前图片", async () => {
+    const wrapper = mountModal({ images: [IMG, IMG2] });
+    wrapper.findComponent({ name: "ImagePanel" }).vm.$emit("preview", "i1");
+    await nextTick();
+    expect(pressKey("ArrowUp").defaultPrevented).toBe(true);
+    await nextTick();
+    expect(wrapper.get(".focus-now-preview-image").attributes("src")).toBe(IMG.src);
+    expect(pressKey("ArrowDown").defaultPrevented).toBe(true);
+    await nextTick();
+    expect(wrapper.get(".focus-now-preview-image").attributes("src")).toBe(IMG2.src);
+    pressKey("ArrowRight");
+    await nextTick();
+    expect(wrapper.get(".focus-now-preview-image").attributes("src")).toBe(IMG2.src);
+    pressKey("ArrowLeft");
+    await nextTick();
+    expect(wrapper.get(".focus-now-preview-image").attributes("src")).toBe(IMG.src);
+    pressKey("Enter");
+    await nextTick();
+    expect(pressKey("ArrowDown").defaultPrevented).toBe(false);
     wrapper.unmount();
   });
 

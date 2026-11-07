@@ -27,6 +27,19 @@ import {
 import type { BoardState } from "../types";
 
 describe("state compatibility", () => {
+  it("保存各提醒事项独立的专注区域宽度并兼容旧数据", () => {
+    const state = defaultState();
+    const workspace = state.workspaces[0];
+    const listId = workspace.todoLists[0].id;
+    workspace.todos[listId] = [
+      { id: "a", text: "A", done: false, focusImageWidth: 35 },
+      { id: "b", text: "B", done: false, focusImageWidth: 70 },
+      { id: "c", text: "C", done: false },
+    ];
+    const restored = normalizeImportedState(getSerializableState(state)).workspaces[0].todos[listId];
+    expect(restored.map((todo) => todo.focusImageWidth)).toEqual([35, 70, undefined]);
+  });
+
   it("round-trips optional workspace area proportions", () => {
     const state = defaultState();
     state.workspaces[0].zoneWidthRatios = [1, 2, 3, 4];

@@ -1,6 +1,7 @@
 /* Four independent surfaces. Keep this layer scoped to the desktop workbench;
    editors, dialogs, the mobile guide and stored layout retain their contracts. */
-.workbench-shell {
+.workbench-shell,
+.focus-now-modal {
   --app-font-size: 14px;
   --scrollbar-size: 4px;
   --desk-surface: #f7f8fa;
@@ -28,7 +29,8 @@
   font-size: var(--app-font-size);
 }
 
-html[data-theme="dark"] .workbench-shell {
+html[data-theme="dark"] .workbench-shell,
+html[data-theme="dark"] .focus-now-modal {
   --desk-surface: #202329;
   --card: #2a2e36;
   --desk-row-hover: #303c46;
@@ -95,7 +97,7 @@ html[data-theme="dark"] .workbench-shell,
   box-shadow: none;
 }
 
-.workbench-zone .panel-header {
+:is(.workbench-zone, .focus-now-body) .panel-header {
   min-height: 48px;
   padding: 0 0 12px;
   gap: 8px;
@@ -106,8 +108,10 @@ html[data-theme="dark"] .workbench-shell,
   box-shadow: none;
 }
 
-.workbench-zone .panel-header h1,
-.workbench-zone .panel-header h2 {
+
+:is(.workbench-zone, .focus-now-body) .panel-header h1,
+:is(.workbench-zone, .focus-now-body) .panel-header h2 {
+
   gap: 8px;
   font-weight: 600;
   line-height: 1.4;
@@ -134,26 +138,41 @@ html[data-theme="dark"] .workbench-shell,
   font-size: 14px;
 }
 .workbench-shell .header-actions { flex-shrink: 0; gap: 0; }
-.workbench-shell .icon-button {
+:is(.workbench-shell, .focus-now-body) .icon-button {
   box-shadow: none; background: transparent; border-radius: 8px; color: var(--muted);
   transition: background-color 180ms ease, color 180ms ease;
 }
-.workbench-shell .icon-button:hover,
-.workbench-shell .icon-button:focus-visible { background: var(--secondary); color: var(--primary); box-shadow: none; }
+:is(.workbench-shell, .focus-now-body) .icon-button:hover,
+:is(.workbench-shell, .focus-now-body) .icon-button:focus-visible { background: var(--secondary); color: var(--primary); box-shadow: none; }
 .workbench-shell .icon-button .n-button__border,
 .workbench-shell .icon-button .n-button__state-border { display: none; }
 .workbench-shell .n-button.icon-button {
   --n-border-radius: 8px !important;
   border-radius: 8px !important;
 }
+
+:is(.workbench-shell, .focus-now-body) .panel-header .desk-ai-action {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+:is(.workbench-shell, .focus-now-body) .panel-header .desk-ai-action:hover,
+:is(.workbench-shell, .focus-now-body) .panel-header .desk-ai-action:focus-visible { background: var(--secondary); }
+
 .workbench-shell button:focus-visible:where(:not([data-pointer-focus])) { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+html[data-theme="dark"] .focus-now-images {
+  --desk-card-shadow: none;
+}
 
 /* Preserve card alignment while leaving room for the hover ring inside the scroll clip. */
 .workbench-zone-assets > .image-panel { overflow: visible; }
-.workbench-zone-assets .image-list-scrollbar { width: calc(100% + 14px); margin-inline-start: -2px; }
-.workbench-zone-assets .image-list-scrollbar .image-list { padding-inline: 2px 12px; }
-.workbench-shell .image-list { padding: calc(var(--desk-group-top) + 2px) 0 16px; gap: 14px; }
-.workbench-shell .image-card { border-radius: var(--desk-card-radius); background: var(--card); box-shadow: var(--desk-card-shadow); }
+:is(.workbench-zone-assets, .focus-now-images) .image-list-scrollbar { width: calc(100% + 14px); margin-inline-start: -2px; }
+:is(.workbench-zone-assets, .focus-now-images) .image-list-scrollbar .image-list { padding-inline: 2px 12px; }
+:is(.workbench-shell, .focus-now-images) .image-list { padding: calc(var(--desk-group-top, 0px) + 2px) 0 16px; gap: 14px; }
+:is(.workbench-shell, .focus-now-images) .image-card { border-radius: var(--desk-card-radius, 12px); background: var(--card); box-shadow: var(--desk-card-shadow, inset 0 0 0 1px var(--line-subtle), 0 2px 3px rgba(24, 35, 52, 0.025), 0 6px 16px rgba(24, 35, 52, 0.025)); }
 
 /* Put scroll rails in the zone inset while groups align with the header rule. */
 .workbench-zone-notes > .quick-block { overflow: visible; }
@@ -419,6 +438,15 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   padding: 18px 16px;
 }
 
+:is(.workbench-shell, .focus-now-body) .desk-ai-action {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 6px; min-height: 30px; padding: 0 8px;
+  color: var(--muted); background: transparent;
+  white-space: nowrap; font-size: 12px;
+}
+:is(.workbench-shell, .focus-now-body) .desk-ai-action:hover { background: var(--secondary); color: var(--primary); }
+
+
 .workbench-shell .workbench-resizer::before {
   top: 50%; bottom: auto; width: 3px; height: 88px;
   transform: translate(-50%, -50%);
@@ -434,7 +462,7 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 
 /* Keep controls usable after a user resizes a column below its default. */
 @container (max-width: 235px) {
-  .workbench-zone .panel-header { flex-wrap: wrap; gap: 2px; }
+  :is(.workbench-zone, .focus-now-body) .panel-header { flex-wrap: wrap; gap: 2px; }
   .workbench-zone .panel-header .header-actions { margin-inline-start: auto; }
   .workbench-zone .todo-heading { flex-wrap: wrap; }
   .workbench-zone .todo-heading-actions { margin-inline-start: auto; }
@@ -493,12 +521,12 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 /* Overdue dates retain their warning color; task text stays readable and neutral. */
 
 .workbench-shell .workspace-trigger-title { font-size: 18px; font-weight: 600; letter-spacing: 0; }
-.workbench-zone .panel-header h1,
-.workbench-zone .panel-header h2 { font-size: 16px; }
+:is(.workbench-zone, .focus-now-body) .panel-header h1,
+:is(.workbench-zone, .focus-now-body) .panel-header h2 { font-size: 16px; }
 
 /* Shared title sizing, including the narrower image column. */
-.workbench-zone .panel-header h1,
-.workbench-zone .panel-header h2 { flex-shrink: 1; }
+:is(.workbench-zone, .focus-now-body) .panel-header h1,
+:is(.workbench-zone, .focus-now-body) .panel-header h2 { flex-shrink: 1; }
 
 /* Keep each tag heading available while its actions scroll underneath. */
 .workbench-shell .quick-tag-heading {
@@ -753,11 +781,14 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
 .workbench-shell .workspace-trigger:focus-visible { background: transparent; box-shadow: none; }
 @media (prefers-reduced-motion: reduce) {
   .workbench-shell .icon-button,
-.workbench-shell .workspace-trigger,
-.workbench-shell .workbench-header-hide-button,
-.workbench-shell .workbench-header-reveal,
-.workbench-shell .workbench-header-hide-button svg,
-.workbench-shell .workbench-header-reveal svg { transition: none; }
+
+  :is(.workbench-shell, .focus-now-body) .panel-header .desk-ai-action,
+  .workbench-shell .workspace-trigger,
+  .workbench-shell .workbench-header-hide-button,
+  .workbench-shell .workbench-header-reveal,
+  .workbench-shell .workbench-header-hide-button svg,
+  .workbench-shell .workbench-header-reveal svg { transition: none; }
+
 }
 
 /* Keep the reading surfaces and keyboard focus clear under system preferences. */
@@ -892,8 +923,8 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   box-shadow: 0 1px 4px color-mix(in srgb, var(--text) 3%, transparent);
 }
 
-.workbench-zone .panel-header h1,
-.workbench-zone .panel-header h2 {
+:is(.workbench-zone, .focus-now-body) .panel-header h1,
+:is(.workbench-zone, .focus-now-body) .panel-header h2 {
   letter-spacing: -0.025em;
 }
 
@@ -966,21 +997,24 @@ html[data-theme="dark"] .workbench-shell .space-text-panel {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 16%, var(--line-subtle)), 0 1px 3px color-mix(in srgb, var(--text) 4%, transparent);
 }
 
-.workbench-shell .image-card {
+:is(.workbench-shell, .focus-now-images) .image-card {
   transition: box-shadow var(--motion-fast) ease;
 }
 
 .workbench-shell .image-card.image-reorder-move,
+.focus-now-images .image-card.image-reorder-move,
 .workbench-shell .image-card.image-reorder-enter-active,
-.workbench-shell .image-card.image-reorder-leave-active {
+.focus-now-images .image-card.image-reorder-enter-active,
+.workbench-shell .image-card.image-reorder-leave-active,
+.focus-now-images .image-card.image-reorder-leave-active {
   transition:
     transform 0.22s cubic-bezier(0.2, 0, 0, 1),
     opacity 0.18s ease,
     box-shadow var(--motion-fast) ease;
 }
 
-.workbench-shell .image-card:hover {
-  box-shadow: var(--desk-card-shadow), 0 0 0 1px color-mix(in srgb, var(--primary) 25%, transparent);
+:is(.workbench-shell, .focus-now-images) .image-card:hover {
+  box-shadow: var(--desk-card-shadow, inset 0 0 0 1px var(--line-subtle)), 0 0 0 1px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
 html[data-theme="dark"] .workbench-shell {
@@ -1077,6 +1111,7 @@ html[data-theme="dark"] .quick-color-custom-preview {
 .quick-color-custom-preview { position: relative; display: inline-block; width: 30px; height: 28px; border: 1px solid var(--line-subtle); border-radius: 4px; }
 .quick-color-custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .quick-color-custom-preview:focus-within { outline: 2px solid var(--text); outline-offset: 2px; }
+
 /* Plain clipboard actions share the quiet header controls, without icon animation. */
 .workbench-shell .space-paste-button {
   width: auto;
@@ -1084,3 +1119,20 @@ html[data-theme="dark"] .quick-color-custom-preview {
   padding-inline: 8px;
   font-size: 12px;
 }
+
+
+
+/* Leave the same breathing room around cards inside the dialog. */
+.focus-now-images .image-list-scrollbar .image-list {
+  padding: 10px 12px 16px;
+}
+
+.workbench-zone-rail .n-icon {
+  writing-mode: horizontal-tb;
+  flex: none;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.focus-now-body .panel-header { flex: none; }
+.focus-now-notes-header .header-actions { margin-left: auto; }

@@ -112,6 +112,8 @@ export interface TodoItem {
   focusNotes?: LineItem[];
   /** 「现在做这个」贴图元数据；载荷走 IndexedDB（同工作区贴图设施）。 */
   focusImages?: StoredImage[];
+  /** 专注弹窗贴图区宽度百分比。 */
+  focusImageWidth?: number;
 }
 
 export interface CompanionCustomGif {

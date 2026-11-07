@@ -474,6 +474,9 @@ function normalizeTodo(item: unknown): TodoItem | null {
     ? record.focusElapsedMs
     : undefined;
   if (focusElapsedMs !== undefined) todo.focusElapsedMs = focusElapsedMs;
+  if (typeof record.focusImageWidth === "number" && Number.isFinite(record.focusImageWidth) && record.focusImageWidth >= 0 && record.focusImageWidth <= 100) {
+    todo.focusImageWidth = record.focusImageWidth;
+  }
   const focusNotes = normalizeFocusNotes(record.focusNotes);
   if (focusNotes.length) todo.focusNotes = focusNotes;
   const focusImages = normalizeFocusImages(record.focusImages);

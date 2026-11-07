@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { NIcon, NModal } from "naive-ui";
-import { AddOutline } from "@vicons/ionicons5";
-import { Timer } from "lucide-vue-next";
+import { Timer, Image as ImageIcon, FileText, Clipboard } from "lucide-vue-next";
 import type { AppLanguage, ImagePasteRequest, LineItem, StoredImage } from "../types";
-import { getUiText } from "../state/i18n";
+import { getDefaultTitles, getIconHeadingText, getUiText } from "../state/i18n";
 import { formatFocusDuration } from "../state/todos";
 import { isTextEntryTarget } from "../utils/dom";
 import { useImageTransform } from "../composables/useImageTransform";
@@ -28,6 +27,7 @@ const props = withDefaults(defineProps<{
   baseMs: number;
   notes: LineItem[];
   images: StoredImage[];
+  initialImageWidth?: number;
   language?: AppLanguage;
 }>(), {
   language: "zh",
@@ -38,6 +38,7 @@ const emit = defineEmits<{
   close: [];
   notesUpdate: [lines: LineItem[]];
   notesBlur: [];
+  imageWidthUpdate: [width: number];
   pasteImage: [request: ImagePasteRequest];
   dropImageFiles: [files: File[], targetId?: string];
   copyImage: [id: string];
@@ -67,7 +68,10 @@ function stopDisplayTimer(): void {
 }
 
 onMounted(() => {
-  if (props.show) startDisplayTimer();
+  if (props.show) {
+    startDisplayTimer();
+    void nextTick(() => { bodyWidth.value = bodyRef.value?.getBoundingClientRect().width ?? 0; });
+  }
 });
 
 // App checkpoint 提升 baseMs 时重置段起点：显示 = baseMs + (now − 段起点)，接续不跳变。
@@ -86,7 +90,51 @@ const displayDurationIso = computed(() => `PT${Math.ceil(displayMs.value / 1000)
 //    saveImage 上抛 App、关预览是收浮层而非撤全屏。 ——
 const activePreviewId = ref<string>();
 const editorActive = ref(false);
-const pasteButtonRef = ref<HTMLButtonElement>();
+const textPanelRef = ref<InstanceType<typeof TextPanel> | null>(null);
+const bodyRef = ref<HTMLElement>();
+const imageWidth = ref(props.initialImageWidth ?? 15);
+const bodyWidth = ref(0);
+const imagesCollapsed = computed(() => bodyWidth.value > 0 && bodyWidth.value * imageWidth.value / 100 < 100);
+const maxImageWidth = computed(() => bodyWidth.value > 0 ? Math.max(0, (bodyWidth.value - 56) / bodyWidth.value * 100) : 100);
+const notesCollapsed = computed(() => bodyWidth.value > 0 && bodyWidth.value * (1 - imageWidth.value / 100) - 12 < 100);
+let resizing = false;
+
+function resizeImages(clientX: number): void {
+  const rect = bodyRef.value?.getBoundingClientRect();
+  if (!rect?.width) return;
+  bodyWidth.value = rect.width;
+  imageWidth.value = Math.max(44 / rect.width * 100, Math.min(maxImageWidth.value, (clientX - rect.left) / rect.width * 100));
+}
+function expandPanel(): void {
+  imageWidth.value = 15;
+  emit("imageWidthUpdate", imageWidth.value);
+}
+function moveDivider(event: PointerEvent): void {
+  if (resizing) resizeImages(event.clientX);
+}
+function stopDivider(): void {
+  if (resizing) emit("imageWidthUpdate", imageWidth.value);
+  resizing = false;
+  window.removeEventListener("pointermove", moveDivider);
+  window.removeEventListener("pointerup", stopDivider);
+  window.removeEventListener("pointercancel", stopDivider);
+}
+function startDivider(event: PointerEvent): void {
+  if (event.button !== 0) return;
+  event.preventDefault();
+  bodyWidth.value = bodyRef.value?.getBoundingClientRect().width ?? 0;
+  resizing = true;
+  window.addEventListener("pointermove", moveDivider);
+  window.addEventListener("pointerup", stopDivider);
+  window.addEventListener("pointercancel", stopDivider);
+}
+function keyboardDivider(event: KeyboardEvent): void {
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+  event.preventDefault();
+  bodyWidth.value = bodyRef.value?.getBoundingClientRect().width ?? 0;
+  imageWidth.value = Math.max(bodyWidth.value ? 44 / bodyWidth.value * 100 : 0, Math.min(maxImageWidth.value, imageWidth.value + (event.key === "ArrowRight" ? 2 : -2)));
+  emit("imageWidthUpdate", imageWidth.value);
+}
 const previewRef = ref<HTMLElement>();
 const previewImageRef = ref<HTMLImageElement>();
 const editorRef = ref<InstanceType<typeof ImageEditor> | null>(null);
@@ -158,7 +206,7 @@ function exitEditor(): void {
 // Esc 关整预览。document 捕获阶段截停——外层 NModal 的 FocusTrap 在冒泡阶段
 // 收 Esc 会关掉整个弹窗（专注会话被误暂停）。
 function handlePreviewKeydown(event: KeyboardEvent): void {
-  if (!activePreviewId.value) return;
+  if (!activePreviewId.value || notesCollapsed.value) return;
   const key = event.key.toLowerCase();
   if (editorActive.value && isTextEntryTarget(event.target)) return;
   if (editorActive.value && event.key === "Enter") {
@@ -213,13 +261,13 @@ function handlePreviewKeydown(event: KeyboardEvent): void {
     if (previewImage.value) emit("copyImage", previewImage.value.id);
     return;
   }
-  if (key === "w" || key === "a") {
+  if (!editorActive.value && (key === "w" || key === "a" || key === "arrowup" || key === "arrowleft")) {
     event.preventDefault();
     event.stopPropagation();
     navigateFocus(-1);
     return;
   }
-  if (key === "s" || key === "d") {
+  if (!editorActive.value && (key === "s" || key === "d" || key === "arrowdown" || key === "arrowright")) {
     event.preventDefault();
     event.stopPropagation();
     navigateFocus(1);
@@ -269,6 +317,8 @@ watch(() => props.images.some((image) => image.id === activePreviewId.value), (e
 // NModal 常驻挂载（App 只切 show 不 v-if）：show 翻转既管预览态也管计时段。
 watch(() => props.show, (visible) => {
   if (visible) {
+    imageWidth.value = props.initialImageWidth ?? 15;
+    void nextTick(() => { bodyWidth.value = bodyRef.value?.getBoundingClientRect().width ?? 0; });
     // 重开弹窗重置段起点与刻度：隐藏期间的空闲间隔不计入专注时长
     //（关闭时增量已并入 App 的 baseMs，显示从新 baseMs 重新起步）。
     segmentStartAt.value = Date.now();
@@ -277,12 +327,14 @@ watch(() => props.show, (visible) => {
     return;
   }
   stopDisplayTimer();
+  stopDivider();
   // 撤下即清预览态：重开弹窗不得复活陈旧预览；activePreviewId 归零连带摘掉键盘监听。
   clearPreview();
 });
 
 onBeforeUnmount(() => {
   stopDisplayTimer();
+  stopDivider();
   document.removeEventListener("keydown", handlePreviewKeydown, { capture: true });
 });
 
@@ -305,13 +357,13 @@ function handleModalShow(value: boolean): void {
     :closable="false"
     :aria-label="uiText.todo.focusDoing"
     :mask-closable="false"
-    :close-on-esc="!activePreviewId"
+    :close-on-esc="!activePreviewId || notesCollapsed"
     @update:show="handleModalShow"
   >
     <div class="focus-now-stage">
       <header class="focus-now-header">
         <div class="focus-now-header-spacer" aria-hidden="true"></div>
-        <h2 class="focus-now-title" :title="title">{{ title }}</h2>
+        <h2 class="focus-now-title" :title="uiText.todo.focusTitlePrefix + title">{{ uiText.todo.focusTitlePrefix }}{{ title }}</h2>
         <div class="focus-now-header-controls">
           <span class="focus-now-timer-group">
             <NIcon class="focus-now-timer-icon" :size="18" :aria-label="uiText.todo.focusTimer" aria-hidden="true">
@@ -336,30 +388,16 @@ function handleModalShow(value: boolean): void {
           </button>
         </div>
       </header>
-      <div class="focus-now-body">
-        <aside class="focus-now-images" :aria-label="uiText.todo.focusImagesLabel">
-          <div class="focus-now-images-toolbar">
-            <button
-              ref="pasteButtonRef"
-              class="focus-now-add-image"
-              type="button"
-              :aria-label="uiText.todo.focusAddImage"
-              :title="uiText.todo.focusAddImage"
-              @click="emit('pasteImage', { placement: 'append', anchor: pasteButtonRef })"
-            >
-              <NIcon size="14" aria-hidden="true">
-                <AddOutline />
-              </NIcon>
-              {{ uiText.todo.focusAddImage }}
-            </button>
-          </div>
+      <div ref="bodyRef" class="focus-now-body" :style="{ '--focus-image-width': `${imageWidth}%` }">
+        <aside :class="{ 'is-collapsed': imagesCollapsed }" class="focus-now-images" :aria-label="uiText.todo.focusImagesLabel">
+          <div class="focus-now-images-rail" @click="expandPanel"><NIcon :component="ImageIcon" /><span>{{ getIconHeadingText(getDefaultTitles(language)["image-title"], "image") }}</span></div>
           <ImagePanel
-            :title="uiText.todo.focusImagesLabel"
+            :title="getDefaultTitles(language)['image-title']"
+            header-id="focus-now-image-title"
             :images="images"
             :active-preview-id="activePreviewId"
             :language="language"
             :can-edit="false"
-            hide-header
             @preview="openPreview"
             @close-preview="clearPreview"
             @copy="(id: string) => emit('copyImage', id)"
@@ -370,10 +408,37 @@ function handleModalShow(value: boolean): void {
             @drop-files="(files: File[], _anchor: HTMLElement | undefined, targetId: string | undefined) => emit('dropImageFiles', files, targetId)"
           />
         </aside>
+        <button
+          class="focus-now-divider"
+          type="button"
+          role="separator"
+          aria-orientation="vertical"
+          :aria-label="uiText.todo.focusImagesLabel"
+          :aria-valuenow="Math.round(imageWidth)"
+          :aria-valuemin="bodyWidth ? Math.round(4400 / bodyWidth) : 0"
+          :aria-valuemax="Math.round(maxImageWidth)"
+          @pointerdown="startDivider"
+          @keydown="keyboardDivider"
+        ></button>
         <!-- 右侧区域 = 记事本 + 预览/编辑浮层：浮层绝对定位盖住（而非 v-show 藏起
              记事本——display:none 会丢滚动位置），关预览即原样露出。 -->
-        <section class="focus-now-notes">
+        <section class="focus-now-notes" :class="{ 'is-collapsed': notesCollapsed }">
+          <button v-if="notesCollapsed" class="focus-now-notes-rail" type="button" @click="expandPanel">
+            <NIcon :component="FileText" /><span>{{ uiText.desk.notes }}</span>
+          </button>
+          <div v-show="!notesCollapsed" class="panel-header desk-zone-heading focus-now-notes-header">
+            <h2><NIcon :component="FileText" /><span>{{ uiText.desk.notes }}</span></h2>
+            <div class="header-actions">
+              <button class="desk-ai-action desk-paste-button" type="button"
+                :aria-label="uiText.common.paste" :title="uiText.common.paste"
+                @mousedown.prevent @click="textPanelRef?.appendPaste()">
+                <NIcon :component="Clipboard" :size="16" /><span>{{ uiText.common.paste }}</span>
+              </button>
+            </div>
+          </div>
           <TextPanel
+            v-show="!notesCollapsed"
+            ref="textPanelRef"
             title-id="focus-now-notes-title"
             :title="uiText.todo.focusDoing"
             :lines="notes"
@@ -383,8 +448,10 @@ function handleModalShow(value: boolean): void {
             @update="(lines: LineItem[]) => emit('notesUpdate', lines)"
             @blur="emit('notesBlur')"
           />
+          <Transition name="focus-preview" appear>
           <div
             v-if="activePreviewId"
+            v-show="!notesCollapsed"
             ref="previewRef"
             class="focus-now-preview"
             tabindex="-1"
@@ -405,7 +472,9 @@ function handleModalShow(value: boolean): void {
             />
             <template v-else>
               <div class="preview-stage focus-now-preview-stage" @wheel="wheel" @mousedown="down">
+                <Transition name="preview-photo" appear>
                 <img
+                  v-if="previewImage?.src"
                   ref="previewImageRef"
                   :key="activePreviewId"
                   class="focus-now-preview-image"
@@ -416,6 +485,7 @@ function handleModalShow(value: boolean): void {
                   draggable="false"
                   @dblclick.stop.prevent="toggleZoom"
                 />
+                </Transition>
               </div>
               <ImagePreviewToolbar :language="language" :can-navigate-previous="canNavigatePrevious"
             :can-navigate-next="canNavigateNext"
@@ -423,6 +493,7 @@ function handleModalShow(value: boolean): void {
             @delete="previewImage && emit('deleteImage', previewImage.id)" @close="clearPreview" />
             </template>
           </div>
+          </Transition>
         </section>
       </div>
     </div>

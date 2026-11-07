@@ -39,11 +39,13 @@ const props = withDefaults(defineProps<{
   language?: AppLanguage;
   /** true = 紧凑形态：隐藏标题行（专注弹窗贴图条），对齐 TextPanel 的 hideHeader 先例。 */
   hideHeader?: boolean;
+  headerId?: string;
   /** false = 抑制编辑入口（专注弹窗贴图条）：右键「编辑」项隐藏、卡片 Enter 重映射为预览，
    *  「Tips」引导项一并隐藏（无 guide 接线的宿主里是死路）。默认 true 保持既有形态。 */
   canEdit?: boolean;
 }>(), {
   language: "zh",
+  headerId: "image-title",
   canEdit: true,
   moveTargets: () => [],
 });
@@ -610,7 +612,7 @@ function handleImageDragWheel(event: WheelEvent): void {
     ref="panelRef"
     class="panel image-panel"
     :class="{ 'drag-hover': isDragHover }"
-    :aria-labelledby="hideHeader ? undefined : 'image-title'"
+    :aria-labelledby="hideHeader ? undefined : headerId"
     tabindex="-1"
     @click="handleGuideClick"
     @dragover.prevent
@@ -621,7 +623,7 @@ function handleImageDragWheel(event: WheelEvent): void {
     @contextmenu="openMenu($event)"
   >
     <div v-if="!hideHeader" class="panel-header desk-zone-heading">
-      <h1 id="image-title">
+      <h1 :id="headerId">
         <NIcon :component="ImageOutline" />
         <span>{{ getIconHeadingText(title, 'image') }}</span>
       </h1>
