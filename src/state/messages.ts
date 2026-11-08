@@ -932,7 +932,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "移除已完成事项？",
       "清掉完成记录？",
       "完成项会被移除",
-      "清理后不可恢复",
+      "确认清理这些完成事项？",
       "确定清理完成项？",
     ],
   },

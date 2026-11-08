@@ -73,6 +73,30 @@ describe("reminder row leave layout", () => {
     wrapper.unmount();
   });
 
+  it("moves existing rows only vertically when their layout changes", async () => {
+    let top = 40;
+    let nextTop = 40;
+    const wrapper = mount(TodoRowsTransition, {
+      props: { memo: [1], tag: "ul" },
+      slots: { default: () => { top = nextTop; return h("li", { key: "row" }, "Reminder"); } },
+      global: { stubs: { "transition-group": false } },
+    });
+    const row = wrapper.get("li").element as HTMLElement;
+    Object.defineProperty(row, "offsetTop", { get: () => top });
+    const animate = vi.fn(() => ({ cancel: vi.fn(), finished: new Promise(() => {}) }) as unknown as Animation);
+    row.animate = animate;
+    nextTop = 10;
+    await wrapper.setProps({ memo: [2] });
+    expect(animate).toHaveBeenCalledWith(
+      [{ transform: "translateY(30px)" }, { transform: "translateY(0)" }],
+      expect.objectContaining({ duration: 220 }),
+    );
+    animate.mockClear();
+    await wrapper.setProps({ memo: [3] });
+    expect(animate).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it("animates growth from the height before insertion and continues from an interrupted animation", () => {
     const list = document.createElement("ul");
     let height = 58;

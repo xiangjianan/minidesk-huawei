@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { NModal, NScrollbar } from "naive-ui";
+import { NIcon, NModal, NScrollbar } from "naive-ui";
+import { Monitor } from "lucide-vue-next";
+import { ImagesAreaIcon, QuickAreaIcon, RemindersAreaIcon, NotesAreaIcon } from "../utils/areaIcons";
 import type { AppLanguage } from "../types";
 import { getUiText, SHORTCUT_HELP } from "../state/i18n";
 
@@ -13,6 +15,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ close: [] }>();
 const uiText = computed(() => getUiText(props.language));
+const areaIcons = { desk: Monitor, images: ImagesAreaIcon, quick: QuickAreaIcon, reminders: RemindersAreaIcon, notes: NotesAreaIcon };
 const sections = computed(() => SHORTCUT_HELP[props.language === "en" ? "en" : "zh"]);
 
 type KeyboardRowId = "system" | "numbers" | "letters-top" | "letters-home" | "letters-bottom" | "controls" | "arrows";
@@ -50,6 +53,9 @@ const KEYBOARD_KEYS: Record<string, ShortcutKeycap> = {
   d: { id: "d", label: "D", row: "letters-home", slot: 5 },
   h: { id: "h", label: "H", row: "letters-home", slot: 8 },
   x: { id: "x", label: "X", row: "letters-bottom", slot: 4 },
+  z: { id: "z", label: "Z", row: "letters-bottom", slot: 3 },
+  c: { id: "c", label: "C", row: "letters-bottom", slot: 5 },
+  y: { id: "y", label: "Y", row: "letters-top", slot: 8 },
   v: { id: "v", label: "V", row: "letters-bottom", slot: 6 },
   "5": { id: "5", label: "5", row: "numbers", slot: 5 },
   enter: { id: "enter", label: "Enter", row: "letters-home", slot: 12, span: 2 },
@@ -199,7 +205,7 @@ function createKeyboardRows(keys: ShortcutKeycap[]): ShortcutKeyboardRow[] {
         </div>
         <div v-for="section in sections" :key="section.area" class="shortcut-section">
           <div class="shortcut-section-heading">
-            <span class="shortcut-section-icon" aria-hidden="true">{{ section.icon }}</span>
+            <span class="shortcut-section-icon" aria-hidden="true"><NIcon :component="areaIcons[section.icon]" :size="16" /></span>
             <div>
               <h4>{{ section.area }}</h4>
               <p>{{ section.summary }}</p>

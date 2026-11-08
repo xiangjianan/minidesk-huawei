@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ImagesAreaIcon as ImageOutline } from "../utils/areaIcons";
 import ContextMenu from "./ContextMenu.vue";
 import { suppressSortCommitMotion } from "../utils/sortCommit";
 import { createSortGap } from "../utils/sortGap";
@@ -10,13 +11,10 @@ import {
   ArrowRightLeft as MoveOutline,
   ArrowDown as ArrowDownOutline,
   ArrowUp as ArrowUpOutline,
-  Clipboard as ClipboardOutline,
   X as CloseOutline,
-  Copy as CopyOutline,
   Pencil as CreateOutline,
   Eye as EyeOutline,
   CircleHelp as HelpCircleOutline,
-  Image as ImageOutline,
   Trash2 as TrashOutline,
 } from "lucide-vue-next";
 import type { DropdownOption } from "naive-ui";
@@ -28,7 +26,7 @@ import { getIconHeadingText, getUiText } from "../state/i18n";
 import { createExclusiveContextMenu } from "../utils/contextMenu";
 import { binaryStringToBytes } from "../utils/base64";
 import { createDragAutoScroll } from "../utils/dragScroll";
-import { renderIcon } from "../utils/dropdownIcons";
+import { renderIcon, CopyActionIcon as CopyOutline, PasteActionIcon as ClipboardOutline } from "../utils/dropdownIcons";
 
 const props = withDefaults(defineProps<{
   title: string;

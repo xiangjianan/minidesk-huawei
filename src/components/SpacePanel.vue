@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { NotesAreaIcon as DocumentTextOutline } from "../utils/areaIcons";
 import ContextMenu from "./ContextMenu.vue";
 import { installPointerSort } from "../utils/pointerSort";
 import { TITLE_MAX_LENGTH, limitTitle } from "../state/titleLimits";
@@ -8,8 +9,6 @@ import type { Component, VNode } from "vue";
 import { NIcon, NScrollbar } from "naive-ui";
 import {
   Plus as AddOutline,
-  FileText as DocumentTextOutline,
-  Clipboard as ClipboardOutline,
   Pencil as CreateOutline,
   ArrowLeftRight as SwapHorizontalOutline,
   Trash2 as TrashOutline,
@@ -19,7 +18,7 @@ import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, GuideKey, LineItem, WorkspaceMoveTarget, WorkspaceSpace } from "../types";
 import { getUiText } from "../state/i18n";
 import { createExclusiveContextMenu } from "../utils/contextMenu";
-import { renderIcon } from "../utils/dropdownIcons";
+import { renderIcon, PasteActionIcon as ClipboardOutline } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
 import TextPanel from "./TextPanel.vue";
 

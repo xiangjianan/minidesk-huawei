@@ -117,13 +117,42 @@ export default defineComponent({
     const cache: VNode[] = [];
     const { dispose, beforeUpdate, afterUpdate, ...leaveHooks } = createTodoLeaveHooks();
     let listElement: HTMLElement | undefined;
-    onBeforeUnmount(dispose);
-    onUpdated(() => { if (listElement) afterUpdate(listElement); });
+    let previousTops = new Map<Element, number>();
+    const moveAnimations = new Map<Element, Animation>();
+    onBeforeUnmount(() => {
+      dispose();
+      for (const animation of moveAnimations.values()) animation.cancel();
+    });
+    onUpdated(() => {
+      if (!listElement) return;
+      afterUpdate(listElement);
+      if (!listElement.closest(".is-sort-committing") && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+        for (const row of listElement.children) {
+          const previous = previousTops.get(row);
+          if (previous === undefined || !(row instanceof HTMLElement)) continue;
+          const dy = previous - row.offsetTop;
+          if (!dy || !row.animate) continue;
+          moveAnimations.get(row)?.cancel();
+          const animation = row.animate(
+            [{ transform: `translateY(${dy}px)` }, { transform: "translateY(0)" }],
+            { duration: 220, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+          );
+          moveAnimations.set(row, animation);
+          void animation.finished.catch(() => {}).then(() => {
+            if (moveAnimations.get(row) === animation) moveAnimations.delete(row);
+          });
+        }
+      }
+      previousTops.clear();
+    });
     return () => withMemo(props.memo, () => {
-      if (listElement) beforeUpdate(listElement);
+      if (listElement) {
+        beforeUpdate(listElement);
+        previousTops = new Map(Array.from(listElement.children, (row) => [row, (row as HTMLElement).offsetTop]));
+      }
       const children = slots.default?.() ?? [];
       return h(TransitionGroup, {
-        ...attrs, ...leaveHooks,
+        ...attrs, ...leaveHooks, moveClass: "todo-vertical-move",
         ref: (instance: unknown) => { listElement = (instance as { $el?: HTMLElement } | null)?.$el; },
       }, { default: () => children });
     }, cache, 0);

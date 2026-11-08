@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { RemindersAreaIcon as CheckboxOutline } from "../utils/areaIcons";
 import ContextMenu from "./ContextMenu.vue";
 import { TITLE_MAX_LENGTH } from "../state/titleLimits";
 import { installPointerSort } from "../utils/pointerSort";
@@ -11,10 +12,7 @@ import {
   Plus as AddOutline,
   AlarmClock as AlarmOutline,
   CheckCheck as CheckmarkDoneOutline,
-  SquareCheck as CheckboxOutline,
   ChevronDown as ChevronDownOutline,
-  Clipboard as ClipboardOutline,
-  Copy as CopyOutline,
   Pencil as CreateOutline,
   EyeOff as EyeOffOutline,
   Eye as EyeOutline,
@@ -61,7 +59,7 @@ import { clampCaret } from "../utils/caret";
 import { splitDroppedTodoText } from "../utils/textEditor";
 import { copySelection, copyTextToClipboard, getSelectionRange, probeClipboardForTextPaste } from "../utils/clipboard";
 import { createExclusiveContextMenu } from "../utils/contextMenu";
-import { renderIcon } from "../utils/dropdownIcons";
+import { renderIcon, CopyActionIcon as CopyOutline, PasteActionIcon as ClipboardOutline } from "../utils/dropdownIcons";
 import { isImeComposing } from "../utils/ime";
 import EditableTitle from "./EditableTitle.vue";
 import TodoRowsTransition from "./TodoRowsTransition";

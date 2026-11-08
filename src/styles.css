@@ -2830,6 +2830,10 @@ button.todo-star-button {
   color: var(--text);
 }
 
+.todo-vertical-move {
+  transition: none !important;
+}
+
 .today-focus-move-move,
 .todo-move-move {
   transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
@@ -4256,6 +4260,24 @@ textarea:focus,
 .n-input.n-input--focus {
   border-color: var(--line-focus);
   box-shadow: var(--focus-ring);
+}
+
+/* The outer Naive input owns the rounded border. Rounding its inner field
+   clips native text selection at only one edge. */
+.n-input .n-input__input-el,
+.n-input .n-input__textarea-el {
+  border-radius: 0;
+}
+
+.n-input .n-input__input-el::selection,
+.n-input .n-input__textarea-el::selection {
+  color: var(--text);
+  background: color-mix(in srgb, var(--primary) 25%, var(--input));
+}
+
+html[data-theme="dark"] .n-input .n-input__input-el::selection,
+html[data-theme="dark"] .n-input .n-input__textarea-el::selection {
+  background: color-mix(in srgb, var(--primary) 38%, var(--input));
 }
 
 .n-input .n-input__input-el:focus,
@@ -6058,6 +6080,8 @@ body,
 /* The modal automatically focuses this link on opening; keep its initial
    appearance free of both the global focus halo and a focus underline. */
 /* 复制反馈气泡：成功/失败时自动浮现在按钮下方，无需 hover，短暂停留后随状态还原消失。 */
+
+
 
 
 

@@ -482,6 +482,8 @@ export const UI_TEXT = {
       mobileLabel: "MiniDesk 移动端引导",
       mobileTitle: "MiniDesk",
       mobileMessage: "完整工作台，请在电脑端打开",
+
+
       pasteEmptyClipboard: "剪贴板里没有文字",
       pasteImageClipboard: "剪贴板里是图片，Ctrl+V 会贴到贴图区",
       densityGood: "今日桌面：轻盈",
@@ -818,6 +820,8 @@ export const UI_TEXT = {
       mobileTitle: "MiniDesk",
       mobileMessage: "Open the full workbench on your desktop",
       /* Unpaired home: desktop-first narrative + quick pairing (mirrors the zh copy). */
+
+
       pasteEmptyClipboard: "No text in the clipboard",
       pasteImageClipboard: "The clipboard holds an image — Ctrl+V pastes it into the image list",
       densityGood: "Today: airy desk",
@@ -1189,7 +1193,7 @@ function isDefaultSpaceTitle(id: string, title: string): boolean {
 
 export type ShortcutHelpSection = {
   area: string;
-  icon: string;
+  icon: "desk" | "images" | "quick" | "reminders" | "notes";
   summary: string;
   tips: string[];
   shortcuts: { key: string; desc: string }[];
@@ -1197,58 +1201,37 @@ export type ShortcutHelpSection = {
 
 export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
   zh: [
-    { area: "工作台", icon: "⌘", summary: "把图片、提醒、快捷动作和便签放在一个桌面里。", tips: [
+    { area: "工作台", icon: "desk", summary: "把图片、提醒、快捷动作和便签放在一个桌面里。", tips: [
       "拖动栏间分隔线可以调整宽度，布局会自动记住。",
       "顶部菜单可以收起，适合给内容区让出空间。",
       "双击列表标题或空间标签可以改名。",
     ], shortcuts: [
-      { key: "Ctrl + S", desc: "立即保存" },
+      { key: "Ctrl/⌘ + S", desc: "立即保存" },
+      { key: "Ctrl/⌘ + Z", desc: "撤销最近的工作台操作（部分编辑器使用自己的撤销）" },
+      { key: "Esc", desc: "关闭提示或退出当前工作台控件" },
+      { key: "←/→", desc: "选中分隔线后调整区域宽度" },
     ]},
-    { area: "图床与预览", icon: "🖼️", summary: "临时收截图，也能做轻量图片剪贴板。", tips: [
+    { area: "贴图", icon: "images", summary: "临时收截图，也能做轻量图片剪贴板。", tips: [
       "外部图片可以直接拖进图床，原图会存在本机浏览器。",
       "预览里右键也有复制、删除和关闭，处理截图更快。",
       "预览支持拖动平移；大图不用反复开新窗口。",
     ], shortcuts: [
-      { key: "Ctrl + V / 拖拽图片", desc: "粘贴或导入图片" },
+      { key: "Ctrl/⌘ + V / 拖拽图片", desc: "粘贴或导入图片" },
+      { key: "Ctrl/⌘ + C", desc: "在预览中复制图片" },
+      { key: "双击图片", desc: "复制图片" },
+      { key: "滚轮 / 双击预览", desc: "缩放图片 / 切换缩放" },
       { key: "Ctrl/⌘ + ↑/↓", desc: "上移 / 下移选中图片" },
       { key: "上下按钮", desc: "切换图片" },
       { key: "拖动预览图", desc: "平移图片" },
       { key: "W/A / ↑/←", desc: "上一张图片" },
       { key: "S/D / ↓/→", desc: "下一张图片" },
-      { key: "Enter", desc: "编辑图片 / 保存编辑" },
+      { key: "Enter", desc: "预览中编辑图片 / 编辑时保存（文字输入框外）" },
+      { key: "Ctrl/⌘ + Z / Ctrl/⌘ + Shift + Z / Ctrl/⌘ + Y", desc: "图片编辑时撤销 / 重做" },
       { key: "5", desc: "复制图片" },
       { key: "Delete / Backspace", desc: "删除图片" },
       { key: "Esc / Space", desc: "关闭预览" },
     ]},
-    { area: "提醒事项", icon: "⏱️", summary: "用时间段管理提醒，把重要事项单独拎出来。", tips: [
-      "右键空白处可以新增提醒事项列表，列表名也能拖动排序。",
-      "提醒时间不依赖星标；普通提醒也可以单独设置通知。",
-      "星标事项会同步进入今日重点，完成后仍会弱化保留。",
-    ], shortcuts: [
-      { key: "拖入文本", desc: "从外部创建提醒" },
-      { key: "拖动条目", desc: "排序或跨列表移动" },
-      { key: "Ctrl/⌘ + ←/→", desc: "跳到行首 / 行尾" },
-      { key: "Ctrl/⌘ + ↑/↓", desc: "上移 / 下移提醒顺序" },
-      { key: "右键条目", desc: "复制 / 删除 / 星标 / 通知" },
-      { key: "右键空白", desc: "新增提醒事项列表" },
-    ]},
-    { area: "工作空间与文本", icon: "📝", summary: "适合放草稿、清单和拆解步骤。", tips: [
-      "空间 Tab 可以双击重命名，也能拖动调整顺序。",
-      "删除空间前会确认；系统会至少保留一个空间。",
-      "空缩进行继续按 Backspace，会先取消缩进再合并内容。",
-      "选中文字后右键「格式」可以加高亮、文字颜色、中划线等标注。",
-    ], shortcuts: [
-      { key: "Tab", desc: "缩进；未标记的行自动补 -" },
-      { key: "Shift + Tab", desc: "减少缩进" },
-      { key: "Enter", desc: "换行（延续缩进）" },
-      { key: "Backspace", desc: "空缩进行减少缩进" },
-      { key: "Ctrl/⌘ + ↑/↓", desc: "上移 / 下移当前行（自动适应编号和短横线）" },
-      { key: "Ctrl/⌘ + Shift + H", desc: "高亮选中文字（重复按取消）" },
-      { key: "Ctrl/⌘ + Shift + X", desc: "给选中文字加中划线" },
-      { key: "Ctrl/⌘ + Shift + U", desc: "给选中文字加下划线" },
-      { key: "右键", desc: "复制 / 粘贴" },
-    ]},
-    { area: "快捷动作", icon: "⚡", summary: "把常用链接和复制片段放在手边。", tips: [
+    { area: "快捷动作", icon: "quick", summary: "把常用链接和复制片段放在手边。", tips: [
       "快捷动作可以隐藏；需要时从三点菜单临时显示隐藏项。",
       "API 快捷动作能复制响应内容，适合做个人小自动化。",
       "快捷动作按列表整理，列表中的加号用于添加动作，也能拖动动作到其他列表。",
@@ -1257,44 +1240,99 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       { key: "右键", desc: "编辑 / 隐藏 / 删除" },
       { key: "拖动按钮", desc: "排序或移动到其他分类" },
     ]},
+    { area: "提醒事项", icon: "reminders", summary: "用时间段管理提醒，把重要事项单独拎出来。", tips: [
+      "右键空白处可以新增提醒事项列表，列表名也能拖动排序。",
+      "提醒时间不依赖星标；普通提醒也可以单独设置通知。",
+      "星标事项会同步进入今日重点，完成后仍会弱化保留。",
+    ], shortcuts: [
+      { key: "Enter", desc: "在当前提醒后新建一条" },
+      { key: "Shift + Enter", desc: "在光标处分割提醒" },
+      { key: "Tab / Shift + Tab", desc: "切换提醒的缩进" },
+      { key: "↑/↓", desc: "切换到上一条 / 下一条提醒" },
+      { key: "拖入文本", desc: "从外部创建提醒" },
+      { key: "拖动条目", desc: "排序或跨列表移动" },
+      { key: "Ctrl/⌘ + ←/→", desc: "跳到行首 / 行尾" },
+      { key: "Ctrl/⌘ + ↑/↓", desc: "在普通列表中上移 / 下移提醒顺序" },
+      { key: "右键条目", desc: "复制 / 删除 / 星标 / 通知" },
+      { key: "右键空白", desc: "新增提醒事项列表" },
+    ]},
+    { area: "记事本", icon: "notes", summary: "适合放草稿、清单和拆解步骤。", tips: [
+      "空间 Tab 可以双击重命名，也能拖动调整顺序。",
+      "删除空间前会确认；系统会至少保留一个空间。",
+      "空缩进行继续按 Backspace，会先取消缩进再合并内容。",
+      "选中文字后右键「格式」可以加高亮、文字颜色、中划线等标注。",
+    ], shortcuts: [
+      { key: "Tab", desc: "缩进；未标记的行自动补 -" },
+      { key: "Shift + Tab", desc: "减少缩进" },
+      { key: "Enter", desc: "换行（延续缩进）" },
+      { key: "Shift + Enter", desc: "不延续缩进直接换行" },
+      { key: "Ctrl/⌘ + ←/→", desc: "跳到当前行行首 / 行尾" },
+      { key: "Ctrl/⌘ + Z / Ctrl/⌘ + Shift + Z / Ctrl + Y", desc: "撤销 / 重做文本编辑" },
+      { key: "Backspace", desc: "空缩进行减少缩进" },
+      { key: "Ctrl/⌘ + ↑/↓", desc: "上移 / 下移当前行（自动适应编号和短横线）" },
+      { key: "Ctrl/⌘ + Shift + H", desc: "高亮选中文字（重复按取消）" },
+      { key: "Ctrl/⌘ + Shift + X", desc: "给选中文字加中划线" },
+      { key: "Ctrl/⌘ + Shift + U", desc: "给选中文字加下划线" },
+      { key: "右键", desc: "复制 / 粘贴" },
+    ]},
   ],
   en: [
-    { area: "Desk", icon: "⌘", summary: "Screenshots, reminders, quick actions, and notes in one local workspace.", tips: [
+    { area: "Desk", icon: "desk", summary: "Screenshots, reminders, quick actions, and notes in one local workspace.", tips: [
       "Drag column dividers to resize areas; the layout is remembered.",
       "Hide the top bar when you want more room for content.",
       "Double-click list titles or space tabs to rename them.",
     ], shortcuts: [
-      { key: "Ctrl + S", desc: "Save immediately" },
+      { key: "Ctrl/⌘ + S", desc: "Save immediately" },
+      { key: "Ctrl/⌘ + Z", desc: "Undo a recent desk action (some editors use their own undo)" },
+      { key: "Esc", desc: "Dismiss the message or leave the active desk control" },
+      { key: "←/→", desc: "Resize areas when a divider is focused" },
     ]},
-    { area: "Images & Preview", icon: "🖼️", summary: "A local screenshot shelf that also works as a lightweight image clipboard.", tips: [
+    { area: "Images", icon: "images", summary: "A local screenshot shelf that also works as a lightweight image clipboard.", tips: [
       "Drag external images into the image area; originals stay in this browser.",
       "Right-click inside preview for copy, delete, and close actions.",
       "Drag in preview to pan large images without opening another window.",
     ], shortcuts: [
-      { key: "Ctrl + V / Drag image", desc: "Paste or import image" },
+      { key: "Ctrl/⌘ + V / Drag image", desc: "Paste or import image" },
+      { key: "Ctrl/⌘ + C", desc: "Copy image in preview" },
+      { key: "Double-click image", desc: "Copy image" },
+      { key: "Scroll / Double-click preview", desc: "Zoom / toggle zoom" },
       { key: "Ctrl/⌘ + ↑/↓", desc: "Move selected image up / down" },
       { key: "Stacked buttons", desc: "Switch preview image" },
       { key: "Drag preview", desc: "Pan image" },
       { key: "W/A / ↑/←", desc: "Previous image" },
       { key: "S/D / ↓/→", desc: "Next image" },
-      { key: "Enter", desc: "Edit image / Save edit" },
+      { key: "Enter", desc: "Edit in preview / save while editing (outside text fields)" },
+      { key: "Ctrl/⌘ + Z / Ctrl/⌘ + Shift + Z / Ctrl/⌘ + Y", desc: "Undo / redo while editing an image" },
       { key: "5", desc: "Copy image" },
       { key: "Delete / Backspace", desc: "Delete image" },
       { key: "Esc / Space", desc: "Close preview" },
     ]},
-    { area: "Reminders", icon: "⏱️", summary: "Organize reminders by time of day and pull important ones into Focus.", tips: [
+    { area: "Quick Actions", icon: "quick", summary: "Keep frequent links and copy snippets close by.", tips: [
+      "Hidden actions can be temporarily shown from the three-dot menu.",
+      "API actions can copy response content for small personal automations.",
+      "Organize actions in lists. Use a list’s plus button to add actions, or drag actions between lists.",
+    ], shortcuts: [
+      { key: "Drag text/URL", desc: "Auto-create action" },
+      { key: "Right-click", desc: "Edit / Hide / Delete" },
+      { key: "Drag action", desc: "Reorder or move to another category" },
+    ]},
+    { area: "Reminders", icon: "reminders", summary: "Organize reminders by time of day and pull important ones into Focus.", tips: [
       "Right-click blank space to create another reminder list; list titles can be dragged.",
       "Notification time works without starring the reminder.",
       "Starred reminders appear in Focus and stay visible in a muted done state after completion.",
     ], shortcuts: [
+      { key: "Enter", desc: "Create a reminder after the current one" },
+      { key: "Shift + Enter", desc: "Split the reminder at the cursor" },
+      { key: "Tab / Shift + Tab", desc: "Toggle reminder indentation" },
+      { key: "↑/↓", desc: "Focus the previous / next reminder" },
       { key: "Drag text", desc: "Create reminder from outside text" },
       { key: "Drag item", desc: "Reorder or move across lists" },
       { key: "Ctrl/⌘ + ←/→", desc: "Jump to line start / end" },
-      { key: "Ctrl/⌘ + ↑/↓", desc: "Move reminder up / down" },
+      { key: "Ctrl/⌘ + ↑/↓", desc: "Move reminder up / down in its list" },
       { key: "Right-click item", desc: "Copy / Delete / Star / Notify" },
       { key: "Right-click blank", desc: "New reminder list" },
     ]},
-    { area: "Spaces & Text", icon: "📝", summary: "Good for drafts, checklists, and breaking tasks into steps.", tips: [
+    { area: "Notepad", icon: "notes", summary: "Good for drafts, checklists, and breaking tasks into steps.", tips: [
       "Double-click a space tab to rename it; drag tabs to reorder spaces.",
       "Deleting a space asks for confirmation; at least one space is always kept.",
       "Backspace on an empty indented line reduces indent before merging text.",
@@ -1303,21 +1341,15 @@ export const SHORTCUT_HELP: Record<AppLanguage, ShortcutHelpSection[]> = {
       { key: "Tab", desc: "Indent; unmarked lines get a dash" },
       { key: "Shift + Tab", desc: "Decrease indent" },
       { key: "Enter", desc: "New line (keep indent)" },
+      { key: "Shift + Enter", desc: "New line without continuing indent" },
+      { key: "Ctrl/⌘ + ←/→", desc: "Jump to the current line start / end" },
+      { key: "Ctrl/⌘ + Z / Ctrl/⌘ + Shift + Z / Ctrl + Y", desc: "Undo / redo text edits" },
       { key: "Backspace", desc: "Decrease indent on empty line" },
       { key: "Ctrl/⌘ + ↑/↓", desc: "Move line up / down (numbering and dashes adapt)" },
       { key: "Ctrl/⌘ + Shift + H", desc: "Highlight the selection (press again to clear)" },
       { key: "Ctrl/⌘ + Shift + X", desc: "Strikethrough the selection" },
       { key: "Ctrl/⌘ + Shift + U", desc: "Underline the selection" },
       { key: "Right-click", desc: "Copy / Paste" },
-    ]},
-    { area: "Quick Actions", icon: "⚡", summary: "Keep frequent links and copy snippets close by.", tips: [
-      "Hidden actions can be temporarily shown from the three-dot menu.",
-      "API actions can copy response content for small personal automations.",
-      "Organize actions in lists. Use a list’s plus button to add actions, or drag actions between lists.",
-    ], shortcuts: [
-      { key: "Drag text/URL", desc: "Auto-create action" },
-      { key: "Right-click", desc: "Edit / Hide / Delete" },
-      { key: "Drag action", desc: "Reorder or move to another category" },
     ]},
   ],
 };

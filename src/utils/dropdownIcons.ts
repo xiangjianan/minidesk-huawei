@@ -2,6 +2,9 @@ import { h } from "vue";
 import type { Component, VNode } from "vue";
 import { NIcon } from "naive-ui";
 
+// Shared action icons keep the same meaning and appearance across the app.
+export { Copy as CopyActionIcon, Clipboard as PasteActionIcon } from "lucide-vue-next";
+
 /**
  * Shared dropdown-option icon renderer (naive-ui DropdownOption `icon` slot).
  * `danger` tints the icon with the destructive-action color; `size` defaults to

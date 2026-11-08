@@ -46,10 +46,11 @@ describe("ShortcutHelp", () => {
     expect(wrapper.text()).toContain("右键空白处可以新增提醒事项列表");
     expect(wrapper.text()).toContain("快捷动作按列表整理");
     expect(wrapper.text()).not.toContain("工具栏");
-    expect(wrapper.text()).toContain("Ctrl + S");
+    expect(wrapper.text()).toContain("Ctrl/⌘ + S");
     expect(wrapper.text()).toContain("Esc / Space");
     expect(wrapper.text()).toContain("上移 / 下移当前行");
-    expect(wrapper.findAll(".shortcut-section-icon").map((icon) => icon.text())).toEqual(["⌘", "🖼️", "⏱️", "📝", "⚡"]);
+    expect(wrapper.findAll(".shortcut-section h4").map((heading) => heading.text())).toEqual(["工作台", "贴图", "快捷动作", "提醒事项", "记事本"]);
+    expect(wrapper.findAll(".shortcut-section-icon svg")).toHaveLength(5);
   });
 
   it("keeps English help copy available", () => {
@@ -137,18 +138,18 @@ describe("SHORTCUT_HELP entries", () => {
   it("pins the reminder Ctrl+←/→ and Ctrl+↑/↓ shortcut entries", () => {
     const zhSection = SHORTCUT_HELP.zh.find((section) => section.area === "提醒事项");
     expect(zhSection?.shortcuts).toContainEqual({ key: "Ctrl/⌘ + ←/→", desc: "跳到行首 / 行尾" });
-    expect(zhSection?.shortcuts).toContainEqual({ key: "Ctrl/⌘ + ↑/↓", desc: "上移 / 下移提醒顺序" });
+    expect(zhSection?.shortcuts).toContainEqual({ key: "Ctrl/⌘ + ↑/↓", desc: "在普通列表中上移 / 下移提醒顺序" });
 
     const enSection = SHORTCUT_HELP.en.find((section) => section.area === "Reminders");
     expect(enSection?.shortcuts).toContainEqual({ key: "Ctrl/⌘ + ←/→", desc: "Jump to line start / end" });
-    expect(enSection?.shortcuts).toContainEqual({ key: "Ctrl/⌘ + ↑/↓", desc: "Move reminder up / down" });
+    expect(enSection?.shortcuts).toContainEqual({ key: "Ctrl/⌘ + ↑/↓", desc: "Move reminder up / down in its list" });
   });
 
   it("pins the Tab dash-autofill copy for notes", () => {
-    const zhSection = SHORTCUT_HELP.zh.find((section) => section.area === "工作空间与文本");
+    const zhSection = SHORTCUT_HELP.zh.find((section) => section.area === "记事本");
     expect(zhSection?.shortcuts).toContainEqual({ key: "Tab", desc: "缩进；未标记的行自动补 -" });
 
-    const enSection = SHORTCUT_HELP.en.find((section) => section.area === "Spaces & Text");
+    const enSection = SHORTCUT_HELP.en.find((section) => section.area === "Notepad");
     expect(enSection?.shortcuts).toContainEqual({ key: "Tab", desc: "Indent; unmarked lines get a dash" });
   });
 
@@ -175,14 +176,14 @@ describe("SHORTCUT_HELP entries", () => {
   it("flags drift in the ASCII binding half of a mixed-language key", () => {
     const drifted = JSON.parse(JSON.stringify(SHORTCUT_HELP.zh)) as ShortcutHelpSections;
     const pasteEntry = drifted
-      .find((section) => section.area === "图床与预览")
-      ?.shortcuts.find((item) => item.key === "Ctrl + V / 拖拽图片");
+      .find((section) => section.area === "贴图")
+      ?.shortcuts.find((item) => item.key === "Ctrl/⌘ + V / 拖拽图片");
     expect(pasteEntry).toBeDefined();
-    pasteEntry!.key = "⌘ + V / 拖拽图片";
+    pasteEntry!.key = "Ctrl + V / 拖拽图片";
 
     const mismatches = collectKeyBindingMismatches(drifted, SHORTCUT_HELP.en);
     expect(mismatches).toHaveLength(1);
+    expect(mismatches[0]).toContain("Ctrl/⌘ + V");
     expect(mismatches[0]).toContain("Ctrl + V");
-    expect(mismatches[0]).toContain("⌘ + V");
   });
 });

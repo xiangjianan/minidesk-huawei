@@ -1753,11 +1753,19 @@ describe("App shell", () => {
       expect(loadState().workspaces[0].todos.morning).toHaveLength(3);
 
       await requestCleanup();
+      const confirmPosition = wrapper.get('[data-testid="companion-bubble"]').attributes("style");
       await wrapper.get('[data-testid="companion-yes"]').trigger("click");
       await nextTick();
       expect(loadState().workspaces[0].todos.morning).toHaveLength(1);
       expect(loadState().workspaces[0].todos.noon).toHaveLength(1);
       expect(wrapper.find("[data-confirm-target]").exists()).toBe(false);
+      await vi.advanceTimersByTimeAsync(200);
+      await nextTick();
+      expect(wrapper.get('[data-testid="companion-bubble"]').attributes("style")).toBe(confirmPosition);
+      await wrapper.get('[data-testid="companion-action"]').trigger("click");
+      expect(loadState().workspaces[0].todos.morning.map((todo) => todo.id)).toEqual(buildTodos(3).map((todo) => todo.id));
+      expect(loadState().workspaces[0].todos.morning.map((todo) => todo.done)).toEqual([true, false, true]);
+      expect(loadState().workspaces[0].todos.noon).toHaveLength(1);
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
@@ -2435,7 +2443,7 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/已清理完成项/);
-      expect(wrapper.find('[data-testid="companion-action"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="companion-action"]').exists()).toBe(true);
       expect(wrapper.getComponent(TodoPanel).props("todos").morning).toEqual([]);
     } finally {
       wrapper.unmount();

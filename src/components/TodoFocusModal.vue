@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { NIcon, NModal } from "naive-ui";
-import { Timer, Image as ImageIcon, FileText, Clipboard } from "lucide-vue-next";
+import { Timer, Image as ImageIcon, FileText } from "lucide-vue-next";
+import { PasteActionIcon as Clipboard } from "../utils/dropdownIcons";
 import type { AppLanguage, ImagePasteRequest, LineItem, StoredImage } from "../types";
 import { getDefaultTitles, getIconHeadingText, getUiText } from "../state/i18n";
 import { formatFocusDuration } from "../state/todos";

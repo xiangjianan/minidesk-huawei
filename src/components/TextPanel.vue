@@ -5,8 +5,6 @@ import type { Component, VNode } from "vue";
 import { NIcon } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import {
-  Clipboard as ClipboardOutline,
-  Copy as CopyOutline,
   CircleHelp as HelpCircleOutline,
   Trash2 as TrashOutline,
 } from "lucide-vue-next";
@@ -30,7 +28,7 @@ import {
 import { clearMarksInRange, MARK_COLORS, toggleMarkInRange, buildMirrorSegments, translateMarksForEdit, type MirrorSegment } from "../utils/textMarks";
 import { createExclusiveContextMenu } from "../utils/contextMenu";
 import { copySelection, getSelectionRange, hasSelection, pasteWithBrowserCommand, probeClipboardForTextPaste } from "../utils/clipboard";
-import { renderIcon } from "../utils/dropdownIcons";
+import { renderIcon, CopyActionIcon as CopyOutline, PasteActionIcon as ClipboardOutline } from "../utils/dropdownIcons";
 import { clampCaret, setStickySelection } from "../utils/caret";
 import { isImeComposing } from "../utils/ime";
 import EditableTitle from "./EditableTitle.vue";

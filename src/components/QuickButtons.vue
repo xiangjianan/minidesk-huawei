@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { QuickAreaIcon as FlashOutline } from "../utils/areaIcons";
 import ContextMenu from "./ContextMenu.vue";
 import QuickListDialog from "./QuickListDialog.vue";
 import MemoTransitionGroup from "./MemoTransitionGroup";
@@ -13,14 +14,11 @@ import {
   Plus as AddOutline,
   LayoutGrid as AppsOutline,
   ChevronDown as ChevronDownOutline,
-  Clipboard as ClipboardOutline,
   CloudUpload as CloudUploadOutline,
-  Copy as CopyOutline,
   Pencil as CreateOutline,
   FileText as DocumentTextOutline,
   EyeOff as EyeOffOutline,
   Eye as EyeOutline,
-  Zap as FlashOutline,
   CircleHelp as HelpCircleOutline,
   Link as LinkOutline,
   Maximize2 as ResizeOutline,
@@ -39,7 +37,7 @@ import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemp
 import { globalSearchNormalized, globalSearchQuery } from "../state/globalSearch";
 import { createExclusiveContextMenu } from "../utils/contextMenu";
 import { readClipboardText } from "../utils/clipboard";
-import { renderIcon } from "../utils/dropdownIcons";
+import { renderIcon, CopyActionIcon as CopyOutline, PasteActionIcon as ClipboardOutline } from "../utils/dropdownIcons";
 import { createDragAutoScroll, findDragScrollContainer } from "../utils/dragScroll";
 import HighlightText from "./HighlightText.vue";
 

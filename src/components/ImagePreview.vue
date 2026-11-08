@@ -2,7 +2,7 @@
 import ContextMenu from "./ContextMenu.vue";
 import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
-import { SwapHorizontalOutline, ArrowDownOutline, ArrowUpOutline, ChevronDownOutline, CloseOutline, CopyOutline, CreateOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
+import { SwapHorizontalOutline, ArrowDownOutline, ArrowUpOutline, ChevronDownOutline, CloseOutline, CreateOutline, HelpCircleOutline, TrashOutline } from "@vicons/ionicons5";
 import { NModal } from "naive-ui";
 import type { DropdownOption } from "naive-ui";
 import { getImageItemContextMenuItems } from "../state/imageContextMenu";
@@ -10,6 +10,7 @@ import type { ImageContextMenuKey } from "../state/imageContextMenu";
 import { getUiText } from "../state/i18n";
 import { useImageTransform } from "../composables/useImageTransform";
 import type { AppLanguage, ImagePasteRequest, StoredImage, WorkspaceMoveTarget } from "../types";
+import { CopyActionIcon as CopyOutline } from "../utils/dropdownIcons";
 import { createExclusiveContextMenu } from "../utils/contextMenu";
 import { isTextEntryTarget } from "../utils/dom";
 import { renderIcon } from "../utils/dropdownIcons";

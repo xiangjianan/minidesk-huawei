@@ -22,4 +22,5 @@ describe("native context menu suppression", () => {
       container.remove();
     }
   });
+
 });

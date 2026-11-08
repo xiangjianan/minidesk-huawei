@@ -792,6 +792,8 @@ onUnmounted(() => {
           </div>
           <div class="workbench-command-actions">
 
+
+
             <button
               type="button"
               ref="headerHideButton"
@@ -806,6 +808,8 @@ onUnmounted(() => {
                 <path d="M5 14 L10.6 10.75 Q12 9.85 13.4 10.75 L19 14" stroke-width="1.4" vector-effect="non-scaling-stroke" />
               </svg>
             </button>
+
+
             <slot name="actions" />
           </div>
         </header>

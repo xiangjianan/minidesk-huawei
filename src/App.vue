@@ -3,6 +3,7 @@ import { TITLE_MAX_LENGTH, limitTitle } from "./state/titleLimits";
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { darkTheme, dateEnUS, dateZhCN, enUS, NButton, NCheckbox, NConfigProvider, NGlobalStyle, NInput, NModal, zhCN } from "naive-ui";
 import CompanionBubble from "./components/CompanionBubble.vue";
+import DialogInputContextMenu from "./components/DialogInputContextMenu.vue";
 import ImagePanel from "./components/ImagePanel.vue";
 import ImagePreview from "./components/ImagePreview.vue";
 import MobileHome from "./components/MobileHome.vue";
@@ -2772,14 +2773,32 @@ function clearDone(period?: TodoPeriod, anchor?: HTMLElement): void {
     anchor,
     () => {
       const currentListIds = listIds.filter(isConfiguredTodoListId);
-      // 清理连坐：被清 todo 的 focusImages 载荷走同一 5 秒宽限删除。
-      const doomedFocusIds = collectTodoFocusPayloadIds(currentListIds.flatMap((listId) => getTodos(listId).filter((todo) => todo.done)));
+      const workspaceId = activeWorkspace.value.id;
+      const removed = currentListIds.map((listId) => ({
+        listId,
+        items: getTodos(listId).flatMap((todo, index) => todo.done
+          ? [{ index, todo: JSON.parse(JSON.stringify(todo)) as TodoItem }]
+          : []),
+      }));
+      const doomedFocusIds = collectTodoFocusPayloadIds(removed.flatMap((list) => list.items.map((item) => item.todo)));
       for (const listId of currentListIds) {
         activeWorkspace.value.todos = clearCompleted(activeWorkspace.value.todos, listId);
       }
       persistNow();
-      doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId));
-      showBubble("clearCompleted", anchor, { hideCompanionAfter: true });
+      showDeleteUndo(getMessage("clearCompleted", Math.random, state.language), anchor, () => {
+        const workspace = state.workspaces.find((item) => item.id === workspaceId);
+        if (!workspace) return;
+        for (const { listId, items } of removed) {
+          if (!workspace.todoLists.some((list) => list.id === listId)) continue;
+          const todos = workspace.todos[listId] ?? [];
+          for (const { index, todo } of items) {
+            if (!todos.some((existing) => existing.id === todo.id)) todos.splice(Math.min(index, todos.length), 0, todo);
+          }
+          workspace.todos[listId] = todos;
+        }
+        persistNow();
+        scheduleNextTodoNotification();
+      }, () => doomedFocusIds.forEach((payloadId) => scheduleImagePayloadDeletion(payloadId)));
     },
     undefined,
     {
@@ -3728,6 +3747,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
 
 <template>
   <NConfigProvider :theme="naiveTheme" :theme-overrides="naiveThemeOverrides" :locale="naiveLocale" :date-locale="naiveDateLocale">
+    <DialogInputContextMenu :copy-label="uiText.common.copy" :paste-label="uiText.common.paste" />
     <NGlobalStyle />
     <WorkbenchShell
       v-if="!isMobileBlocked"
