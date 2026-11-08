@@ -181,10 +181,12 @@ describe("SettingsMenu", () => {
     });
 
     expect(wrapper.find('[data-key="data"]').text()).toBe("数据");
+    const dataOption = (wrapper.findAllComponents(dropdownStub)[1].props("options") as Array<{ key: string; children?: Array<{ key: string; render?: () => { children?: string } }> }>).find((option) => option.key === "data");
+    expect(dataOption?.children?.find((child) => child.key === "data-storage-hint")?.render?.().children).toContain("数据保存在当前浏览器");
     expect(wrapper.findAll('[data-key="create-workspace"]')).toHaveLength(1);
     expect(wrapper.findAll('[data-key="import"]')).toHaveLength(1);
     expect(wrapper.findAll('[data-key="export-workspace"]')).toHaveLength(1);
-    expect(wrapper.find('[data-key="clear-data"]').text()).toBe("清空数据");
+    expect(wrapper.find('[data-key="clear-data"]').text()).toBe("清空当前空间");
     expect(wrapper.find('[data-key="create-workspace"]').classes()).toContain("dropdown-child-option");
     expect(wrapper.find('[data-key="import"]').classes()).toContain("dropdown-child-option");
     expect(wrapper.find('[data-key="export-workspace"]').classes()).toContain("dropdown-child-option");
@@ -446,8 +448,10 @@ describe("SettingsMenu", () => {
     expect(wrapper.find('[data-key="gif-theme:hermes"]').text()).toBe("云霞");
     expect(wrapper.find('[data-key="gif-theme:ikun"]').text()).toBe("ikun");
     expect(wrapper.find('[data-key="gif-theme:custom"]').text()).toBe("自定义");
-    expect(wrapper.find('[data-key="gif-theme:none"]').text()).toBe("不显示");
+    expect(wrapper.find('[data-key="gif-theme:none"]').text()).toBe("安静模式");
     expect(wrapper.find('[data-key="gif-theme:none"]').classes()).toContain("is-selected");
+    await wrapper.setProps({ language: "en" });
+    expect(wrapper.find('[data-key="gif-theme:none"]').text()).toBe("Quiet mode");
     expect(wrapper.find('[data-key="gif-theme:hermes"]').classes()).not.toContain("is-selected");
   });
 
@@ -534,6 +538,10 @@ describe("SettingsMenu", () => {
     const dark = new File(["dark"], "dark.gif", { type: "image/gif" });
 
     await wrapper.find('[data-key="gif-theme:custom"]').trigger("click");
+    const actions = wrapper.get(".gif-theme-custom-dialog .dialog-actions").findAll("button");
+    expect(actions.map((button) => button.text())).toEqual(["取消", "确定"]);
+    expect(actions[0].classes()).toContain("quick-dialog-action");
+    expect(actions[1].classes()).toContain("quick-dialog-submit");
     const uploads = wrapper.findAllComponents(uploadStub);
     expect(uploads).toHaveLength(2);
     expect(uploads[0].props("accept")).toBe("image/gif,.gif");

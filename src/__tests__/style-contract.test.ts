@@ -117,10 +117,10 @@ describe("workbench style contract", () => {
     expect(ruleBodies(styles, ".focus-companion img").join("\n")).not.toContain("height: auto");
   });
 
-  it("shows a pointer cursor over the companion GIF (it opens area tips on click)", () => {
+  it("shows a grab cursor over the draggable companion GIF", () => {
     const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
 
-    expectSelectorBody(styles, ".focus-companion-gif", "cursor: pointer");
+    expectSelectorBody(styles, ".focus-companion-gif", "cursor: grab");
   });
 
   it("lifts the command bar above the preview modal layer while the image preview is open", () => {
@@ -199,7 +199,7 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".image-editor-crop-actions", "transform: translate(8px, 8px)");
     expectSelectorBody(styles, ".image-editor-tool[data-tooltip]:hover::after", "content: attr(data-tooltip)");
     expectSelectorBody(styles, ".workbench-grid", "position: relative");
-    expectSelectorBody(styles, ".workbench-grid", "grid-template-columns: minmax(100px, 0.1fr) minmax(100px, 0.23024fr) minmax(100px, 0.25582fr) minmax(100px, 0.41394fr)");
+    expectSelectorBody(styles, ".workbench-grid", "grid-template-columns: var(--workbench-default-columns)");
     expectSelectorBody(styles, ".workbench-grid", "gap: 14px");
     expectSelectorBody(styles, ".workbench-grid", "padding: 14px");
     expectSelectorBody(styles, ".workbench-grid", "grid-row: 2");

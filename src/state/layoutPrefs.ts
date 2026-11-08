@@ -31,9 +31,9 @@ export function normalizeZoneWidthRatios(value: unknown): number[] | undefined {
 
 export function readWorkbenchWidthRatios(workspaceId: string): number[] | undefined {
   try {
-    const raw = localStorage.getItem(workbenchWidthStorageKey(workspaceId))
-      ?? localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY)
-      ?? localStorage.getItem(LEGACY_WORKBENCH_WIDTH_STORAGE_KEY);
+    const raw = workspaceId
+      ? localStorage.getItem(workbenchWidthStorageKey(workspaceId))
+      : localStorage.getItem(WORKBENCH_WIDTH_STORAGE_KEY) ?? localStorage.getItem(LEGACY_WORKBENCH_WIDTH_STORAGE_KEY);
     return normalizeZoneWidthRatios(JSON.parse(raw ?? "null"));
   } catch { return undefined; }
 }

@@ -110,6 +110,7 @@ const options = computed(() => [
     key: "data",
     icon: renderIcon(ServerOutline),
     children: [
+      { type: "render" as const, key: "data-storage-hint", render: () => h("div", { class: "settings-data-hint" }, text.value.settings.dataStorageHint) },
       { label: text.value.settings.createWorkspace, key: "create-workspace", icon: renderIcon(AddOutline) },
       { label: text.value.settings.import, key: "import", icon: renderIcon(CloudUploadOutline) },
       { label: text.value.settings.exportCurrentWorkspace, key: "export-workspace", icon: renderIcon(CloudDownloadOutline) },
@@ -272,12 +273,16 @@ function clearCustomGifPreviews(): void {
 
 onBeforeUnmount(clearCustomGifPreviews);
 
+function focusCustomGifDialog(): void {
+  document.querySelector<HTMLElement>(".gif-theme-custom-modal")?.focus({ preventScroll: true });
+}
+
 function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
   if (normalizeLanguage(props.language) === "zh") {
     return COMPANION_GIF_THEME_OPTIONS.find((option) => option.value === theme)?.label ?? theme;
   }
   if (theme === "custom") return "Custom";
-  if (theme === "none") return "Hidden";
+  if (theme === "none") return text.value.settings.gifQuietMode;
   return theme;
 }
 
@@ -328,9 +333,9 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
   </NDropdown>
   </div>
   <NModal :show="customGifDialogOpen" preset="card" class="quick-dialog gif-theme-custom-modal"
-    :z-index="CONTEXT_MENU_Z_INDEX + 1" :mask-closable="false"
+    :z-index="CONTEXT_MENU_Z_INDEX + 1" :mask-closable="false" :auto-focus="false" tabindex="-1"
     :title="text.settings.customGif" :aria-label="text.settings.customGif"
-    @close="closeCustomGifDialog" @esc="closeCustomGifDialog">
+    @after-enter="focusCustomGifDialog" @close="closeCustomGifDialog" @esc="closeCustomGifDialog">
   <section class="gif-theme-custom-dialog">
     <label>
       <span>{{ text.settings.lightGif }}</span>
@@ -362,9 +367,9 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
         <NButton size="small" class="gif-theme-upload-button">{{ text.settings.chooseDarkGif }}</NButton>
       </NUpload>
     </label>
-    <div class="gif-theme-custom-actions">
-      <button class="gif-theme-custom-cancel" type="button" @click="closeCustomGifDialog">{{ text.common.cancel }}</button>
-      <button class="gif-theme-custom-confirm" type="button" @click="confirmCustomGif">{{ text.common.confirm }}</button>
+    <div class="dialog-actions">
+      <NButton class="quick-dialog-action gif-theme-custom-cancel" @click="closeCustomGifDialog">{{ text.common.cancel }}</NButton>
+      <NButton class="quick-dialog-action quick-dialog-submit gif-theme-custom-confirm" @click="confirmCustomGif">{{ text.common.confirm }}</NButton>
     </div>
   </section>
   </NModal>

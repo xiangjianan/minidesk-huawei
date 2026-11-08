@@ -7,6 +7,7 @@ export type MessageSurface = "companion" | "naive-message";
 export type MessageKey =
   | "save"
   | "stateConflict"
+  | "gifThemeChanged"
   | "workspaceDensityGood"
   | "workspaceDensityAreaOver"
   | "workspaceDensityAllOver"
@@ -148,6 +149,11 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
       "记录已经归位",
       "可以安心继续",
     ],
+  },
+  gifThemeChanged: {
+    mood: "happy",
+    surface: "companion",
+    variants: ["换个新模样", "新主题来啦", "换好新装啦", "今天换个心情", "新伙伴登场", "换个样子陪你", "新形象已就位", "换上喜欢的样子", "新主题已换好", "换个模样继续"],
   },
   stateConflict: {
     mood: "warning",
@@ -489,20 +495,8 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
     ],
   },
   dataCleared: {
-    mood: "calm",
-    surface: "companion",
-    variants: [
-      "数据已清空",
-      "当前数据已重置",
-      "看板已恢复初始状态",
-      "已清空所有本地数据",
-      "数据清理完成",
-      "MiniDesk 已重置",
-      "本地数据已清空",
-      "已恢复默认数据",
-      "清空完成",
-      "看板数据已清空",
-    ],
+    mood: "calm", surface: "companion",
+    variants: ["当前空间已清空", "当前空间已重置", "这个空间已清空", "空间内容已清空", "当前空间清理完成", "当前空间已恢复初始状态", "这个空间已重置", "空间内容已重置", "当前空间已整理好", "空间已清空"],
   },
   deleteImage: {
     mood: "calm",
@@ -937,20 +931,8 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
     ],
   },
   confirmClearData: {
-    mood: "warning",
-    surface: "companion",
-    variants: [
-      "清空当前数据？此操作不可恢复",
-      "确认清空所有本地数据？",
-      "当前看板数据会被清空",
-      "清空后会恢复初始状态",
-      "确定清空数据？",
-      "所有本地数据将被清空",
-      "清空数据后不可恢复",
-      "确认重置当前看板？",
-      "这会清空当前数据",
-      "清空当前看板数据？",
-    ],
+    mood: "warning", surface: "companion",
+    variants: ["清空当前空间？", "确认清空当前空间？", "要清空这个空间吗？", "当前空间将被重置", "确定清空当前空间？", "清空此空间的内容？", "这个空间将被清空", "确认重置当前空间？", "当前空间内容会被清空", "要重置当前空间吗？"],
   },
   about: {
     mood: "calm",
@@ -966,6 +948,7 @@ export const MESSAGE_CATALOG: Record<MessageKey, MessageEntry> = {
 };
 
 const EN_MESSAGE_VARIANTS = {
+  gifThemeChanged: ["A fresh new look", "New theme is here", "All dressed up", "A change of mood", "A new look for today", "Ready in a new style", "New look, same desk", "Theme switched", "Looking fresh", "Ready to keep going"],
   save: ["Thought tucked away", "Desk saved it", "This page is tucked away"],
   stateConflict: ["Another window saved newer changes", "Newer board data exists in another tab", "Save paused to avoid overwriting another tab"],
   workspaceDensityGood: [
@@ -1054,7 +1037,7 @@ const EN_MESSAGE_VARIANTS = {
   noCompletedTodos: ["No completed reminders to clear", "Nothing completed here yet", "There are no completed items"],
   dataExported: ["Data exported", "Backup created", "Board data exported"],
   dataImported: ["Data imported", "Import complete", "Board data updated"],
-  dataCleared: ["Data cleared", "Board reset", "Local data cleared"],
+  dataCleared: ["Current workspace cleared", "This workspace was reset", "Workspace content cleared"],
   deleteImage: ["Image deleted", "Screenshot removed", "Image removed from the list"],
   deleteQuick: ["Shortcut deleted", "Quick entry removed", "Shortcut removed"],
   deleteQuickTag: ["Tag deleted. Shortcuts moved to General.", "Tag removed. Shortcuts are now in General.", "Quick tag deleted and entries kept."],
@@ -1082,7 +1065,7 @@ const EN_MESSAGE_VARIANTS = {
   confirmImportWorkspace: ["Import this as a new workspace?", "It will be added as a new workspace; existing ones stay.", "A new workspace will be appended to the list."],
   confirmImportWorkspaceConflict: ["A workspace with this name already exists. Overwrite or add?", "Same-name workspace found — overwrite or add new?", "This name is taken. Overwrite the existing one or add as new?"],
   confirmClearCompleted: ["Clear completed reminders?", "Remove completed items?", "Completed reminders will be removed."],
-  confirmClearData: ["Clear all local data?", "This will reset the board.", "Current data will be cleared."],
+  confirmClearData: ["Clear this workspace?", "Reset the current workspace?", "This workspace’s content will be cleared."],
   about: [
     [
       "MiniDesk",
@@ -1096,6 +1079,15 @@ export function getMessage(key: MessageKey, random = Math.random, language: AppL
   const entry = MESSAGE_CATALOG[key];
   const variants = normalizeLanguage(language) === "en" ? EN_MESSAGE_VARIANTS[key] : entry.variants;
   return withKaomoji(randomItem(variants, random), entry.mood, random);
+}
+
+/** Add one expression to plain bubble copy without duplicating an existing one. */
+export function ensureBubbleKaomoji(text: string, random = Math.random): string {
+  if (!text.trim()) return text;
+  const known = Object.values(KAOMOJI_BY_MOOD).some((items) => items.some((item) => text.includes(item)));
+  // Some existing messages use a hand-written face outside the shared catalog.
+  const hasFace = /[（(][^()（）\n]{0,24}[・＾￣⌒ω▽﹏；°･꒳][^()（）\n]{0,24}[)）ヾ]/u.test(text);
+  return known || hasFace ? text : `${text} ${randomItem(KAOMOJI_BY_MOOD.calm, random)}`;
 }
 
 export function withKaomoji(text: string, mood: MessageMood, random = Math.random): string {

@@ -29,6 +29,18 @@ describe("CompanionBubble", () => {
     document.body.innerHTML = "";
   });
 
+  it("adds an expression to plain dynamic messages when rendered", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: { visible: true, message: "配对设置已保存" },
+      global: { stubs: { NPopover: popoverStub } },
+    });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(document.body.querySelector('[data-testid="companion-confirm"]')?.textContent).toMatch(/^配对设置已保存 .+/);
+    wrapper.unmount();
+  });
+
   it("shows the GIF immediately and delays the message bubble by 200ms", async () => {
     vi.useFakeTimers();
     const wrapper = mount(CompanionBubble, {
@@ -56,6 +68,24 @@ describe("CompanionBubble", () => {
     await wrapper.vm.$nextTick();
     expect(document.body.querySelector('[data-testid="companion-confirm"]')?.textContent).toContain("提示内容");
 
+    wrapper.unmount();
+  });
+
+  it("keeps the GIF visible while a Tips message fades out", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(CompanionBubble, {
+      attachTo: document.body,
+      props: { visible: true, message: "Tips" },
+      global: { stubs: { NPopover: popoverStub } },
+    });
+    await vi.advanceTimersByTimeAsync(200);
+    await wrapper.setProps({ message: "" });
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).toContain("is-visible");
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).not.toContain("is-dismissing");
+    await vi.advanceTimersByTimeAsync(260);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).toContain("is-visible");
+    expect(wrapper.get('[data-testid="companion-bubble"]').classes()).not.toContain("is-dismissing");
     wrapper.unmount();
   });
 

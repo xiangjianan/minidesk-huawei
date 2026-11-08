@@ -521,6 +521,9 @@ function finishImagePointerDrag(event?: PointerEvent, canceled = false): void {
 
 function handleImagePointerDown(event: PointerEvent, image: StoredImage): void {
   if (event.button !== 0 || event.altKey) return;
+  // The thumbnail must keep the browser's native drag gesture so it can
+  // leave the window as an image. Card padding still starts pointer sorting.
+  if (event.target instanceof HTMLImageElement) return;
   event.preventDefault();
   const element = event.currentTarget as HTMLElement;
   const rect = element.getBoundingClientRect();

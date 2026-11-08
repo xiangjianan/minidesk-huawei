@@ -22,7 +22,7 @@ export const COMPANION_GIF_THEME_OPTIONS: Array<{
   { value: "hermes", label: "云霞" },
   { value: "ikun", label: "ikun" },
   { value: "custom", label: "自定义" },
-  { value: "none", label: "不显示" },
+  { value: "none", label: "安静模式" },
 ];
 
 export function normalizeCompanionGifTheme(value: unknown): CompanionGifTheme {

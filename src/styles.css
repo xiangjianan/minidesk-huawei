@@ -549,7 +549,6 @@ html[data-theme="dark"] .n-modal-mask {
 
 .dialog-actions > .n-button,
 .notify-panel-actions > button,
-.gif-theme-custom-actions > button,
 .support-footer > .n-button,
 .workspace-inbox-footer > .n-button {
   flex: 1 1 0;
@@ -3010,9 +3009,13 @@ button.todo-section-menu-button {
 
 /* 点击 GIF 会轮换弹出当前区域的 Tips，悬浮用指针光标提示可点。 */
 .focus-companion-gif {
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
   transition: opacity 0.26s ease;
 }
+
+.focus-companion-gif:active { cursor: grabbing; }
 
 .companion-gif-fade-enter-active,
 .companion-gif-fade-leave-active {
@@ -3326,26 +3329,6 @@ button.companion-undo-button {
 
 .gif-theme-upload-button {
   justify-content: center;
-}
-
-.gif-theme-custom-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.gif-theme-custom-cancel,
-.gif-theme-custom-confirm {
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--line-control);
-  background: transparent;
-  color: var(--text);
-  font-size: var(--app-font-size);
-}
-
-.gif-theme-custom-confirm {
-  background: var(--button-hover);
 }
 
 .settings-trigger .n-badge {
@@ -4104,7 +4087,7 @@ body:has(.image-preview) .workbench-command-bar {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(100px, 0.1fr) minmax(100px, 0.23024fr) minmax(100px, 0.25582fr) minmax(100px, 0.41394fr);
+  grid-template-columns: var(--workbench-default-columns);
 }
 
 .workbench-resizer {
@@ -6686,3 +6669,7 @@ button.focus-now-divider {
   cursor: pointer;
 }
 .focus-now-notes-rail .n-icon { writing-mode: horizontal-tb; font-size: 16px; }
+
+/* Brief data guidance inside the settings submenu and export dialog. */
+.settings-data-hint { max-width: 220px; padding: 8px 12px; color: var(--muted); font-size: 12px; line-height: 1.5; white-space: normal; }
+.workspace-export-hint { margin: 0 0 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }

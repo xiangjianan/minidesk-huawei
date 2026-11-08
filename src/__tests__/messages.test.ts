@@ -7,12 +7,14 @@ import {
   getMessage,
   getMessageCatalogSummary,
   withKaomoji,
+  ensureBubbleKaomoji,
 } from "../state/messages";
 import { GUIDE_MESSAGES } from "../state/i18n";
 
 const messageKeys = [
   "save",
   "stateConflict",
+  "gifThemeChanged",
   "workspaceDensityGood",
   "workspaceDensityAreaOver",
   "workspaceDensityAllOver",
@@ -123,6 +125,17 @@ describe("message catalog", () => {
     const message = withKaomoji("第一段\n第二段", "happy", () => 0);
 
     expect(message).toBe(`第一段 ${KAOMOJI_BY_MOOD.happy[0]}\n第二段 ${KAOMOJI_BY_MOOD.happy[0]}`);
+  });
+
+  it("adds an expression to plain bubble text without duplicating existing expressions", () => {
+    expect(ensureBubbleKaomoji("设置已保存", () => 0)).toBe(`设置已保存 ${KAOMOJI_BY_MOOD.calm[0]}`);
+    expect(ensureBubbleKaomoji("已完成 (｡•̀ᴗ-)✧", () => 0)).toBe("已完成 (｡•̀ᴗ-)✧");
+    expect(ensureBubbleKaomoji("重定向 (・_・ヾ\n响应体：data", () => 0)).toBe("重定向 (・_・ヾ\n响应体：data");
+    expect(ensureBubbleKaomoji("" , () => 0)).toBe("");
+  });
+
+  it.each(["zh", "en"] as const)("varies the GIF theme feedback in %s", (language) => {
+    expect(getMessage("gifThemeChanged", () => 0, language)).not.toBe(getMessage("gifThemeChanged", () => 0.9, language));
   });
 
   it("can summarize all popup text locations for maintenance", () => {

@@ -574,6 +574,17 @@ describe("ImagePanel", () => {
     wrapper.unmount();
   });
 
+  it("leaves thumbnail pointer gestures to the browser for native drag-out", () => {
+    const wrapper = mountImagePanel([{ id: "img-1", src: "data:image/png;base64,aW1n", createdAt: 1 }]);
+    const thumbnail = wrapper.get(".image-card img").element;
+    const pointerDown = new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 0, clientX: 40, clientY: 120 });
+    thumbnail.dispatchEvent(pointerDown);
+    expect(pointerDown.defaultPrevented).toBe(false);
+    window.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, cancelable: true, clientX: 90, clientY: 160 }));
+    expect(wrapper.find(".image-drag-preview").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("sorts images when a native thumbnail drag drops on another card", async () => {
     const wrapper = mountImagePanel([
       { id: "a", src: "data:image/png;base64,aW1n", createdAt: 1 },

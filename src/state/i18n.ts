@@ -484,8 +484,12 @@ export const UI_TEXT = {
       mobileMessage: "完整工作台，请在电脑端打开",
 
 
+
+      localStorageHint: "工作空间数据自动保存在当前浏览器；可通过设置中的「数据」导出备份。",
+      exportScopeHint: "仅导出当前工作空间中选定的区域。",
       pasteEmptyClipboard: "剪贴板里没有文字",
       pasteImageClipboard: "剪贴板里是图片，Ctrl+V 会贴到贴图区",
+
       densityGood: "今日桌面：轻盈",
       densityWarning: "今日桌面：略满",
       densityCrowded: "今日桌面：过热",
@@ -544,11 +548,13 @@ export const UI_TEXT = {
       light: "浅色",
       dark: "深色",
       data: "数据",
+      dataStorageHint: "数据保存在当前浏览器。导出空间可用于备份或迁移。",
       createWorkspace: "新建空间",
       import: "导入空间",
-      clearData: "清空数据",
-      clearDataHint: "所有空间都会被清空，请提前做好备份",
+      clearData: "清空当前空间",
+      clearDataHint: "仅清空当前空间的内容，此操作不可撤销，请先备份",
       gifTheme: "GIF 主题",
+      gifQuietMode: "安静模式",
       suggest: "提建议",
       shortcutHelp: "帮助与快捷键",
       about: "关于",
@@ -822,8 +828,12 @@ export const UI_TEXT = {
       /* Unpaired home: desktop-first narrative + quick pairing (mirrors the zh copy). */
 
 
+
+      localStorageHint: "Workspace data is saved automatically in this browser. Export a backup under Settings → Data.",
+      exportScopeHint: "Only the selected areas of this workspace are exported.",
       pasteEmptyClipboard: "No text in the clipboard",
       pasteImageClipboard: "The clipboard holds an image — Ctrl+V pastes it into the image list",
+
       densityGood: "Today: airy desk",
       densityWarning: "Today: a full desk",
       densityCrowded: "Today: heated desk",
@@ -882,11 +892,13 @@ export const UI_TEXT = {
       light: "Light",
       dark: "Dark",
       data: "Data",
+      dataStorageHint: "Data stays in this browser. Export a workspace to back it up or move it.",
       createWorkspace: "Create workspace",
       import: "Import workspace",
-      clearData: "Clear data",
-      clearDataHint: "All workspaces will be cleared. Back up first.",
+      clearData: "Clear current workspace",
+      clearDataHint: "Only this workspace’s content will be cleared. This cannot be undone; back up first.",
       gifTheme: "GIF theme",
+      gifQuietMode: "Quiet mode",
       suggest: "Feedback",
       shortcutHelp: "Help & Shortcuts",
       about: "About",

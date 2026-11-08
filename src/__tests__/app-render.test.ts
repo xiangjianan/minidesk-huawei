@@ -1227,6 +1227,26 @@ describe("App shell", () => {
     }
   });
 
+  it("does not hide and re-show the GIF as a Tips message expires", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountApp();
+    try {
+      await wrapper.get("textarea").trigger("focus");
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.get('[data-testid="companion-gif"]').trigger("click");
+      await vi.advanceTimersByTimeAsync(5000);
+      await nextTick();
+      const surface = wrapper.get('[data-testid="companion-bubble"]');
+      expect(surface.classes()).toContain("is-visible");
+      expect(surface.classes()).not.toContain("is-dismissing");
+      await vi.advanceTimersByTimeAsync(130);
+      expect(surface.classes()).not.toContain("is-dismissing");
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("随机弹出锚定气泡所属区域的 Tips：连点不重复上一条", async () => {
     vi.useFakeTimers();
     // 快捷文本复制气泡带 quick-block 锚点但没有 guideKey：区域只能靠锚点解析。
@@ -1343,6 +1363,7 @@ describe("App shell", () => {
     const wrapper = mountApp();
 
     try {
+      expect(wrapper.get('[data-testid="save-status"]').attributes("title")).toContain("工作空间数据自动保存在当前浏览器");
       await wrapper.get('[data-testid="save-status"]').trigger("click");
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
@@ -6919,7 +6940,7 @@ describe("App shell", () => {
     }
   });
 
-  it("clears all board data from the settings data menu after confirmation", async () => {
+  it("clears only the current workspace after confirmation", async () => {
     vi.useFakeTimers();
     const deleteDatabase = vi.fn(() => {
       const request: { onsuccess: (() => void) | null; onerror: (() => void) | null; onblocked: (() => void) | null } = {
@@ -6942,6 +6963,9 @@ describe("App shell", () => {
           noon: [],
           evening: [],
         },
+      }, {
+        ...defaultWorkspace("other"),
+        spaces: [{ id: "other-note", title: "Other", lines: [{ text: "保留其他空间", indent: 0 }] }],
       }],
     }));
     localStorage.setItem("unrelated-key", "keep-me");
@@ -6956,10 +6980,10 @@ describe("App shell", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.get('[data-testid="companion-confirm"]').text()).toMatch(/清空|当前数据|不可恢复/);
-      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("清空数据");
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toBe("清空当前空间");
       expect(wrapper.get('[data-testid="companion-yes"]').classes()).toContain("is-danger");
       // the destructive-action hint (all workspaces cleared, back up first) is shown
-      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toMatch(/所有空间都会被清空/);
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("仅清空当前空间");
 
       const gridBefore = wrapper.find(".workbench-grid").element;
 
@@ -6969,16 +6993,14 @@ describe("App shell", () => {
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
 
-      // localStorage fully wiped — every key, not just the app key
-      expect(localStorage.length).toBe(0);
-      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
-      expect(localStorage.getItem("unrelated-key")).toBeNull();
-      // entire IndexedDB image database deleted (current + legacy)
-      expect(deleteDatabase).toHaveBeenCalledWith("mini-desk-images-v1");
-      expect(deleteDatabase).toHaveBeenCalledWith("todo-board-images-v1");
+      expect(localStorage.getItem("unrelated-key")).toBe("keep-me");
+      expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull();
+      expect(deleteDatabase).not.toHaveBeenCalled();
+      expect(loadState().theme).toBe("dark");
+      expect(loadState().workspaces.find(workspace => workspace.id === "other")?.spaces[0].lines[0].text).toBe("保留其他空间");
       // in-memory board reset to defaults
       expect(wrapper.text()).not.toContain("待清空");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/清空|已重置|数据|初始/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/清空|已重置|数据|初始|清理|整理/);
       // the workbench shell remounts so its entrance animation replays
       const gridAfter = wrapper.find(".workbench-grid").element;
       expect(gridAfter).not.toBe(gridBefore);
@@ -8787,6 +8809,8 @@ describe("App shell", () => {
       vi.useRealTimers();
     }
   });
+
+
 
 
 });

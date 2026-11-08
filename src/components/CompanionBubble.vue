@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Component, VNode } from "vue";
 import { LogoGithub } from "@vicons/ionicons5";
 import { Undo2 } from "lucide-vue-next";
@@ -9,6 +9,8 @@ import type { DropdownOption } from "naive-ui";
 import type { AppLanguage, CompanionGifTheme } from "../types";
 import { DEFAULT_COMPANION_GIF_THEME, getCompanionGifSrc, getCompanionNotificationIconSrc } from "../state/companionGifThemes";
 import { getUiText } from "../state/i18n";
+import { ensureBubbleKaomoji } from "../state/messages";
+import { clampCompanionOffset, readCompanionOffset, saveCompanionOffset, type CompanionOffset } from "../state/companionPosition";
 import { organizeContextMenu, CONTEXT_MENU_Z_INDEX, createExclusiveContextMenu } from "../utils/contextMenu";
 
 const props = withDefaults(defineProps<{
@@ -84,6 +86,13 @@ const gifTimerStartedAt = ref(0);
 const hoveringCompanion = ref(false);
 const surfaceRef = ref<HTMLElement | null>(null);
 const popoverRef = ref<HTMLElement | null>(null);
+const popoverInstance = ref<{ syncPosition?: () => void } | null>(null);
+const savedOffset = ref<CompanionOffset | null>(readCompanionOffset());
+const draggedOffset = ref<CompanionOffset | null>(null);
+const viewport = ref({ width: window.innerWidth, height: window.innerHeight });
+let drag: { pointerId: number; startX: number; startY: number; right: number; bottom: number; moved: boolean; temporary: boolean } | null = null;
+let suppressGifClick = false;
+
 const uiText = computed(() => getUiText(props.language));
 
 const gifMenu = ref<{ x: number; y: number } | null>(null);
@@ -95,7 +104,7 @@ function renderGifMenuIcon(icon: Component): () => VNode {
 }
 
 const gifMenuOptions = computed<DropdownOption[]>(() => [
-  { label: "不显示", key: "hide", icon: renderGifMenuIcon(EyeOffOutline) },
+  { label: uiText.value.settings.gifQuietMode, key: "hide", icon: renderGifMenuIcon(EyeOffOutline) },
 ]);
 
 function openGifMenu(event: MouseEvent): void {
@@ -114,6 +123,7 @@ function onSurfaceContextmenu(event: MouseEvent): void {
 
 /** 点击 GIF：普通消息气泡在场时轮换弹出该区域的 Tips；二次确认框保持原流程不响应。 */
 function handleGifClick(): void {
+  if (suppressGifClick) { suppressGifClick = false; return; }
   if (props.confirm) return;
   emit("gifClick");
 }
@@ -126,13 +136,68 @@ function handleGifMenuSelect(key: string): void {
 }
 
 const placementStyle = computed(() => {
+  const offset = draggedOffset.value ?? (!props.confirm && !props.position ? savedOffset.value : null);
+  if (offset) {
+    const bounded = clampCompanionOffset(offset, viewport.value.width, viewport.value.height);
+    return { right: `${bounded.right}px`, bottom: `${bounded.bottom}px`, top: "auto" };
+  }
   if (!props.position) return undefined;
-  return {
-    right: props.position.right,
-    bottom: props.position.bottom,
-    top: props.position.top,
-  };
+  return { right: props.position.right, bottom: props.position.bottom, top: props.position.top };
 });
+
+watch(placementStyle, () => { void nextTick(() => popoverInstance.value?.syncPosition?.()); }, { flush: "post" });
+watch(() => [props.sequence, props.confirm, props.visible] as const, ([sequence, confirm, visible], [oldSequence, oldConfirm]) => {
+  if (!visible || (confirm && !oldConfirm) || (sequence !== oldSequence && !oldConfirm)) draggedOffset.value = null;
+});
+
+function onDragStart(event: PointerEvent): void {
+  if (event.button !== 0 || !surfaceRef.value) return;
+  const rect = surfaceRef.value.getBoundingClientRect();
+  drag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY,
+    right: window.innerWidth - rect.right, bottom: window.innerHeight - rect.bottom,
+    moved: false, temporary: Boolean(props.confirm || props.position) };
+  suppressGifClick = false;
+  window.addEventListener("pointermove", onDragMove, { passive: false });
+  window.addEventListener("pointerup", onDragEnd);
+  window.addEventListener("pointercancel", onDragCancel);
+}
+function onDragMove(event: PointerEvent): void {
+  if (!drag || event.pointerId !== drag.pointerId) return;
+  const dx = event.clientX - drag.startX;
+  const dy = event.clientY - drag.startY;
+  if (!drag.moved && Math.hypot(dx, dy) < 5) return;
+  drag.moved = true;
+  event.preventDefault();
+  draggedOffset.value = clampCompanionOffset({ right: drag.right - dx, bottom: drag.bottom - dy }, window.innerWidth, window.innerHeight);
+}
+function stopDragging(): void {
+  window.removeEventListener("pointermove", onDragMove);
+  window.removeEventListener("pointerup", onDragEnd);
+  window.removeEventListener("pointercancel", onDragCancel);
+  drag = null;
+}
+function onDragEnd(event: PointerEvent): void {
+  if (!drag || event.pointerId !== drag.pointerId) return;
+  if (drag.moved && draggedOffset.value) {
+    suppressGifClick = true;
+    window.setTimeout(() => { suppressGifClick = false; }, 0);
+    if (!drag.temporary) {
+      savedOffset.value = draggedOffset.value;
+      saveCompanionOffset(draggedOffset.value);
+    }
+  }
+  stopDragging();
+  if (!isPointInsideElement(event.clientX, event.clientY, surfaceRef.value) && !isPointInsideElement(event.clientX, event.clientY, popoverRef.value)) handleCompanionMouseleave();
+}
+function onDragCancel(event: PointerEvent): void {
+  if (!drag || event.pointerId !== drag.pointerId) return;
+  draggedOffset.value = null;
+  stopDragging();
+}
+function onViewportResize(): void {
+  viewport.value = { width: window.innerWidth, height: window.innerHeight };
+}
+
 
 const activeGifTheme = computed(() => props.gifTheme ?? DEFAULT_COMPANION_GIF_THEME);
 const hasPopoverPayload = computed(() => Boolean(props.message || props.confirm || props.linkText || props.signatureText));
@@ -164,7 +229,7 @@ const popoverContentVisible = computed(() => visiblePopover.value || retainingPo
 const popoverKey = computed(() => `${props.position?.right ?? "default"}:${props.position?.bottom ?? "default"}`);
 
 function syncRenderedContent(): void {
-  renderedMessage.value = props.message;
+  renderedMessage.value = ensureBubbleKaomoji(props.message);
   renderedLinkText.value = props.linkText ?? "";
   renderedLinkHref.value = props.linkHref ?? "";
   renderedSignatureText.value = props.signatureText ?? "";
@@ -328,6 +393,7 @@ onMounted(() => {
   exclusiveMenu.mount();
   window.addEventListener("keydown", handleConfirmKeydown, { capture: true });
   window.addEventListener("click", handleConfirmOutsideClick, { capture: true });
+  window.addEventListener("resize", onViewportResize);
 });
 
 onUnmounted(() => {
@@ -335,6 +401,8 @@ onUnmounted(() => {
   window.removeEventListener("keydown", handleConfirmKeydown, { capture: true });
   window.removeEventListener("click", handleConfirmOutsideClick, { capture: true });
   stopWindowMousemoveTracking();
+  stopDragging();
+  window.removeEventListener("resize", onViewportResize);
   window.clearTimeout(popoverTimer.value);
   window.clearTimeout(contentTimer.value);
   window.clearTimeout(replacementTimer.value);
@@ -343,6 +411,12 @@ onUnmounted(() => {
 });
 
 function handleConfirmOutsideClick(event: MouseEvent): void {
+  if (suppressGifClick && event.target instanceof Node && !surfaceRef.value?.contains(event.target)) {
+    suppressGifClick = false;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return;
+  }
   if (!props.confirm || !(event.target instanceof Node)) return;
   if (surfaceRef.value?.contains(event.target) || popoverRef.value?.contains(event.target)) return;
   emit("no");
@@ -407,7 +481,7 @@ function handleCompanionMouseenter(): void {
 }
 
 function handleCompanionMouseleave(): void {
-  if (!hoveringCompanion.value) return;
+  if (!hoveringCompanion.value || drag?.moved) return;
   hoveringCompanion.value = false;
   stopWindowMousemoveTracking();
   resumeGifTimer();
@@ -419,7 +493,7 @@ function handleCompanionMousemove(): void {
 }
 
 function handleWindowMousemove(event: MouseEvent): void {
-  if (!hoveringCompanion.value) return;
+  if (!hoveringCompanion.value || drag?.moved) return;
   if (isPointInsideElement(event.clientX, event.clientY, surfaceRef.value)) return;
   if (isPointInsideElement(event.clientX, event.clientY, popoverRef.value)) return;
   handleCompanionMouseleave();
@@ -450,7 +524,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
     v-if="surfaceVisible"
     ref="surfaceRef"
     class="focus-companion"
-    :class="{ 'is-visible': gifVisible || (!shouldRenderGif && popoverVisible), 'is-fading': gifFading, 'is-dismissing': retainingPopoverContent && !popoverVisible }"
+    :class="{ 'is-visible': gifVisible || (!shouldRenderGif && popoverVisible), 'is-fading': gifFading, 'is-dismissing': dismissing && retainingPopoverContent && !popoverVisible }"
     :style="placementStyle"
     data-testid="companion-bubble"
     :aria-hidden="!surfaceVisible"
@@ -460,6 +534,7 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
     @contextmenu="onSurfaceContextmenu"
   >
     <NPopover
+      ref="popoverInstance"
       :key="popoverKey"
       trigger="manual"
       placement="top-end"
@@ -484,6 +559,8 @@ function isPointInsideElement(x: number, y: number, element: HTMLElement | null)
             alt=""
             role="button"
             tabindex="0"
+            draggable="false"
+            @pointerdown="onDragStart"
             :aria-label="uiText.app.gifTipsAction"
             @click="handleGifClick"
             @keydown.enter.prevent="handleGifClick"
