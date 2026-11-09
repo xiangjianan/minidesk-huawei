@@ -8,6 +8,7 @@ import { getDefaultTitles, getIconHeadingText, getUiText } from "../state/i18n";
 import { formatFocusDuration } from "../state/todos";
 import { isTextEntryTarget } from "../utils/dom";
 import { useImageTransform } from "../composables/useImageTransform";
+
 import TextPanel from "./TextPanel.vue";
 import ImagePanel from "./ImagePanel.vue";
 import ImageEditor from "./ImageEditor.vue";

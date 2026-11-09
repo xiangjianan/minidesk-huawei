@@ -18,6 +18,8 @@ const options = computed(() => [
 function open(event: MouseEvent): void {
   const field = event.target;
   if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) || !field.closest(".n-modal, [role='dialog']")) return;
+  // Notebook editors own their richer context menu, including inside dialogs.
+  if (field.closest(".text-editor-frame")) return;
   if (field instanceof HTMLInputElement && !["text", "search", "url", "tel", "password"].includes(field.type)) return;
   event.preventDefault();
   event.stopPropagation();

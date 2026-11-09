@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import DialogInputContextMenu from "../components/DialogInputContextMenu.vue";
+import TextPanel from "../components/TextPanel.vue";
 
 const clipboard = { writeText: vi.fn().mockResolvedValue(undefined), readText: vi.fn().mockResolvedValue("XYZ") };
 Object.defineProperty(navigator, "clipboard", { configurable: true, value: clipboard });
@@ -9,6 +10,20 @@ Object.defineProperty(navigator, "clipboard", { configurable: true, value: clipb
 afterEach(() => { document.body.innerHTML = ""; vi.clearAllMocks(); });
 
 describe("dialog input context menu", () => {
+  it("lets a notebook inside a dialog open its own full context menu", async () => {
+    const dialog = document.createElement("div");
+    dialog.setAttribute("role", "dialog");
+    document.body.append(dialog);
+    const generic = mount(DialogInputContextMenu, { props: { copyLabel: "复制", pasteLabel: "粘贴" }, global: { stubs: { ContextMenu: true } } });
+    const notebook = mount(TextPanel, { attachTo: dialog, props: { titleId: "note", title: "记事本", lines: [] }, global: { stubs: { ContextMenu: true } } });
+    await notebook.get("textarea").trigger("contextmenu");
+    expect(generic.findComponent({ name: "ContextMenu" }).exists()).toBe(false);
+    const options = notebook.getComponent({ name: "ContextMenu" }).props("options");
+    expect(options.map((option: { key: string }) => option.key)).toEqual(expect.arrayContaining(["copy", "paste"]));
+    expect(options.map((option: { key: string }) => option.key)).not.toContain("smart-paste");
+    notebook.unmount();
+    generic.unmount();
+  });
   it("copies the selection and pastes over it while notifying the input", async () => {
     const dialog = document.createElement("div");
     dialog.setAttribute("role", "dialog");
