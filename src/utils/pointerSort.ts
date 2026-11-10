@@ -91,15 +91,7 @@ export function installPointerSort(root: HTMLElement, selector: string, pauseAut
           content.style.gap = contentStyle.gap;
           content.style.paddingInlineEnd = contentStyle.paddingInlineEnd;
         }
-        const count = preview.querySelector<HTMLElement>(".quick-button-clicks");
-        const sourceCount = source.querySelector<HTMLElement>(".quick-button-clicks");
-        if (count && sourceCount) {
-          const countStyle = getComputedStyle(sourceCount);
-          count.style.position = countStyle.position;
-          count.style.flex = countStyle.flex;
-          count.style.maxWidth = countStyle.maxWidth;
-          count.style.alignSelf = countStyle.alignSelf;
-        }
+
       }
       if (source.matches(".todo-heading, .quick-tag-heading") && element !== source) {
         // Recreate the workbench ancestry so the entire cloned list retains

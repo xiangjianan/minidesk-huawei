@@ -37,6 +37,21 @@ describe("repeat companion bubbles with the REAL naive-ui popover", () => {
     document.body.innerHTML = "";
   });
 
+  it("fades the confirmation out before showing the deletion result", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountBubble();
+    await requestConfirm(wrapper, "确认删除？");
+    await advance(400);
+
+    await wrapper.setProps({ sequence: 1, message: "已删除", confirm: false, actionText: "撤销" });
+    expect(popoverText()).toContain("确认删除");
+    expect(document.body.querySelector(".is-replacing")).not.toBeNull();
+    await advance(180);
+    expect(popoverText()).toContain("已删除");
+    expect(document.body.querySelector('[data-testid="companion-action"]')).not.toBeNull();
+    wrapper.unmount();
+  });
+
   it("same position (no key change): second confirm shows after full fade", async () => {
     vi.useFakeTimers();
     const wrapper = mountBubble();

@@ -54,7 +54,7 @@ import type {
   TodoStarChange,
   WorkspaceMoveTarget,
 } from "../types";
-import { TODO_DENSITY_THRESHOLD, formatFocusDuration, getOrderedTodos, getTodoDropMoveTarget, getTodoReorderTarget, todoKey } from "../state/todos";
+import { TODO_DENSITY_THRESHOLD, formatFocusDuration, hasTodoFocus, getOrderedTodos, getTodoDropMoveTarget, getTodoReorderTarget, todoKey } from "../state/todos";
 import { clampCaret } from "../utils/caret";
 import { splitDroppedTodoText } from "../utils/textEditor";
 import { copySelection, copyTextToClipboard, getSelectionRange, probeClipboardForTextPaste } from "../utils/clipboard";
@@ -99,6 +99,7 @@ const emit = defineEmits<{
   star: [change: TodoStarChange];
   notify: [period: TodoPeriod, id: string, notifyAt: number | undefined, anchor?: HTMLElement];
   focusNow: [period: TodoPeriod, id: string];
+  cancelFocus: [period: TodoPeriod, id: string, anchor?: HTMLElement];
   remove: [period: TodoPeriod, id: string, anchor?: HTMLElement];
   clearCompleted: [period: TodoPeriod, anchor?: HTMLElement];
   clearAllCompleted: [anchor?: HTMLElement];
@@ -341,7 +342,8 @@ const menuOptions = computed<DropdownOption[]>(() => {
       // 普通粘贴在聚焦时写入选区；失焦时新增提醒。
       options.push({ label: uiText.value.common.paste, key: "paste", icon: renderIcon(ClipboardOutline) });
     }
-    options.push({ label: uiText.value.todo.focusNow, key: "focus-now", icon: renderIcon(TimerOutline) });
+    options.push({ label: hasTodoFocus(todo) ? uiText.value.todo.focusContinue : uiText.value.todo.focusNow, key: "focus-now", icon: renderIcon(TimerOutline) });
+    if (hasTodoFocus(todo)) options.push({ label: uiText.value.todo.focusCancel, key: "cancel-focus", icon: renderIcon(TrashOutline, true) });
     options.push({
       label: isValidNotifyAt(todo?.notifyAt) ? uiText.value.todo.editNotify : uiText.value.todo.setNotify,
       key: "notify",
@@ -414,7 +416,7 @@ const contentTodoLists = computed<{ id: TodoListId }[]>((previous) => {
 // invalidate the memo, while changing only column assignments keeps it stable.
 const todoRenderSignatures = computed<Record<TodoListId, unknown[][]>>((previous) => Object.fromEntries(
   contentTodoLists.value.map(({ id }) => {
-    const next = getTodos(id).map(todo => [todo.id, todo.text, todo.done, todo.starred, todo.notifyAt, todo.focusElapsedMs]);
+    const next = getTodos(id).map(todo => [todo.id, todo.text, todo.done, todo.starred, todo.notifyAt, todo.focusElapsedMs, todo.focusStarted, todo.focusNotes?.length, todo.focusImages?.length]);
     const cached = previous?.[id];
     return [id, cached && cached.length === next.length && next.every((fields, index) =>
       fields.every((value, field) => value === cached[index]?.[field]),
@@ -600,10 +602,34 @@ function handleColumnBlankClick(event: MouseEvent, column: number): void {
   handleListClick(event, list.id);
 }
 
+let filledTodoBeforePointerDown: HTMLInputElement | null = null;
+
+function handlePanelPointerDown(event: PointerEvent): void {
+  if (menu.value) exclusiveMenu.handleClickOutside(event);
+  const active = document.activeElement;
+  const target = event.target as HTMLElement;
+  filledTodoBeforePointerDown = active instanceof HTMLInputElement
+    && panelRef.value?.contains(active)
+    && active.matches(".todo-input, .today-focus-input")
+    && active.value.trim()
+    && !target.closest("button, input, textarea, .todo-item, .today-focus-item, .todo-completed-divider")
+    ? active : null;
+}
+
 function handleListClick(event: MouseEvent, period: TodoPeriod): void {
   const target = event.target as HTMLElement;
   if (target.closest("button, input, textarea, .todo-item, .todo-completed-divider")) return;
   event.stopPropagation();
+  const active = document.activeElement;
+  const filledInput = filledTodoBeforePointerDown ?? (active instanceof HTMLInputElement
+    && panelRef.value?.contains(active)
+    && active.matches(".todo-input, .today-focus-input")
+    && active.value.trim() ? active : null);
+  filledTodoBeforePointerDown = null;
+  if (filledInput) {
+    filledInput.blur();
+    return;
+  }
   emitDeclutterPrompt(period, event.currentTarget as HTMLElement);
   emit("create", period);
 }
@@ -1449,6 +1475,11 @@ async function handleMenuSelect(key: string): Promise<void> {
     emit("focusNow", period, id);
     return;
   }
+  if (key === "cancel-focus" && id) {
+    closeMenu();
+    emit("cancelFocus", period, id, anchor);
+    return;
+  }
   if (key.startsWith("move-list-ws:")) {
     closeMenu();
     emit("moveListToWorkspace", period, key.slice("move-list-ws:".length));
@@ -1938,7 +1969,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
 </script>
 
 <template>
-  <section ref="panelRef" class="panel todo-panel" aria-labelledby="todo-title" @pointerdown.capture="menu && exclusiveMenu.handleClickOutside($event)" @contextmenu="openPanelMenu" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
+  <section ref="panelRef" class="panel todo-panel" aria-labelledby="todo-title" @pointerdown.capture="handlePanelPointerDown" @contextmenu="openPanelMenu" @dragleave="handleTodoDragLeave" @drop="handleTodoDragLeave" @dragend="handleTodoDragEnd">
     <div class="panel-header desk-zone-heading">
       <h2 id="todo-title"><NIcon :component="CheckboxOutline" /><span>{{ uiText.desk.reminders }}</span></h2>
       <div class="header-actions">
@@ -2035,7 +2066,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
               <NIcon v-else class="todo-notify-icon" :component="AlarmOutline" />
             </button>
             <button
-              v-if="(item.todo.focusElapsedMs ?? 0) > 0"
+              v-if="hasTodoFocus(item.todo)"
               class="todo-focus-badge"
               type="button"
               :aria-label="uiText.todo.focusBadgeAria.replace('{time}', formatFocusDuration(item.todo.focusElapsedMs ?? 0))"
@@ -2259,7 +2290,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
                   <NIcon v-else class="todo-notify-icon" :component="AlarmOutline" />
                 </button>
                 <button
-                  v-if="(entry.todo.focusElapsedMs ?? 0) > 0"
+                  v-if="hasTodoFocus(entry.todo)"
                   class="todo-focus-badge"
                   type="button"
                   :aria-label="uiText.todo.focusBadgeAria.replace('{time}', formatFocusDuration(entry.todo.focusElapsedMs ?? 0))"

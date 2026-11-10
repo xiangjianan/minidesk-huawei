@@ -652,6 +652,7 @@ function handleImageDragWheel(event: WheelEvent): void {
       @drop.prevent.stop="handleExternalDrop"
       @contextmenu.prevent.stop="openMenu($event)"
     >
+      <p v-if="images.length === 0" class="workbench-empty-hint image-empty-hint">{{ uiText.images.emptyHint }}</p>
       <TransitionGroup name="image-reorder" tag="div" class="image-list">
       <button
         v-for="(image, index) in images"

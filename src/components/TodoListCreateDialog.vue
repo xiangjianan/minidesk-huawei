@@ -15,6 +15,7 @@ const show = ref(false);
 const title = ref("");
 const editingId = ref<string>();
 const duplicate = computed(() => Boolean(findTodoListByTitle((props.lists ?? []).filter(list => list.id !== editingId.value), limitTitle(title.value), props.language ?? "zh")));
+const canSubmit = computed(() => Boolean(limitTitle(title.value)) && !duplicate.value);
 const attempted = ref(false);
 let anchor: HTMLElement | undefined;
 
@@ -50,13 +51,13 @@ defineExpose({ open });
     <form class="quick-form" autocomplete="off" @submit.prevent="confirm">
       <label for="todo-list-create-input">
         <span>{{ uiText.todo.listName }}</span>
-        <NInput ref="inputRef" v-model:value="title" :status="attempted && duplicate ? 'error' : undefined" :maxlength="TITLE_MAX_LENGTH" show-count
+        <NInput ref="inputRef" v-model:value="title" :status="duplicate && (attempted || Boolean(limitTitle(title))) ? 'error' : undefined" :maxlength="TITLE_MAX_LENGTH" show-count
           :input-props="{ id: 'todo-list-create-input', class: 'todo-list-create-input', name: 'mini-desk-todo-list-title', autocomplete: 'off' }" />
       </label>
-      <p v-if="attempted && duplicate" role="alert">{{ uiText.todo.duplicateList }}</p>
+      <p v-if="duplicate && (attempted || Boolean(limitTitle(title)))" role="alert">{{ uiText.todo.duplicateList }}</p>
       <div class="dialog-actions">
         <NButton class="quick-dialog-action todo-list-create-cancel" @click="show = false">{{ uiText.common.cancel }}</NButton>
-        <NButton class="quick-dialog-action quick-dialog-submit todo-list-create-confirm" attr-type="submit">{{ editingId ? uiText.common.save : uiText.common.confirm }}</NButton>
+        <NButton class="quick-dialog-action quick-dialog-submit todo-list-create-confirm" attr-type="submit" :disabled="!canSubmit">{{ uiText.common.save }}</NButton>
       </div>
     </form>
   </NModal>

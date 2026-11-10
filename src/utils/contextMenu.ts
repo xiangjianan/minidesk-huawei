@@ -1,4 +1,4 @@
-import { type VNodeChild } from "vue";
+import { h, type VNodeChild } from "vue";
 import type { DropdownOption } from "naive-ui";
 
 const CONTEXT_MENU_OPENED = "mini-desk-context-menu-opened";
@@ -9,7 +9,10 @@ function resolveOptionLabel(label: DropdownOption["label"]): string {
   return typeof label === "string" ? label : "";
 }
 
+
 export function renderContextMenuLabel(option: DropdownOption): VNodeChild {
+  if (option.key === "cancel-focus") return h("span", { style: { color: "var(--danger)" } }, resolveOptionLabel(option.label));
+
   return resolveOptionLabel(option.label);
 }
 

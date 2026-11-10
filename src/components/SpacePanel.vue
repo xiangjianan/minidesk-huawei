@@ -436,6 +436,7 @@ onUnmounted(() => disposeSort?.());
           :title-id="`space-${activeSpace.id}-title`"
           :title="activeSpace.title"
           :lines="activeSpace.lines"
+          :placeholder="uiText.desk.notesEmpty"
           :language="props.language"
           hide-header
           delegate-blank-context-menu

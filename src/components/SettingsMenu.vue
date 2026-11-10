@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onBeforeUnmount, ref } from "vue";
+import { computed, h, onBeforeUnmount, ref, watch } from "vue";
 import {
   Plus as AddOutline,
   Check as CheckmarkOutline,
@@ -27,6 +27,7 @@ import { getUiText, normalizeLanguage } from "../state/i18n";
 import type { AppLanguage, CompanionCustomGif, CompanionGifTheme, GuideKey, ThemeMode, ZoneKey, ZoneVisibility } from "../types";
 import { CONTEXT_MENU_Z_INDEX } from "../utils/contextMenu";
 import { renderIcon } from "../utils/dropdownIcons";
+import { createMenuAim, menuAimProps } from "../utils/menuAim";
 
 const props = withDefaults(defineProps<{
   appVersion: string;
@@ -68,6 +69,9 @@ const emit = defineEmits<{
 const SUPPORT_AUTHOR_ENABLED = false;
 
 const menuOpen = ref(false);
+const menuAim = createMenuAim();
+const { menuProps: settingsMenuProps, nodeProps: settingsNodeProps } = menuAimProps(menuAim);
+watch(menuOpen, (open) => { if (open) menuAim.start(); else menuAim.stop(); }, { flush: "sync" });
 // NDropdown requests closure after every selection, even when its show is controlled.
 let keepOpenAfterPreferenceSelect = false;
 const triggerRef = ref<HTMLElement | null>(null);
@@ -271,7 +275,7 @@ function clearCustomGifPreviews(): void {
   revokeCustomGifPreview("dark");
 }
 
-onBeforeUnmount(clearCustomGifPreviews);
+onBeforeUnmount(() => { clearCustomGifPreviews(); menuAim.stop(); });
 
 function focusCustomGifDialog(): void {
   document.querySelector<HTMLElement>(".gif-theme-custom-modal")?.focus({ preventScroll: true });
@@ -314,6 +318,8 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
     :show="menuOpen"
     :z-index="CONTEXT_MENU_Z_INDEX"
     :options="options"
+    :menu-props="settingsMenuProps"
+    :node-props="settingsNodeProps"
     @select="handleSelect"
     @update:show="handleDropdownShow"
   >
@@ -369,7 +375,7 @@ function getCompanionGifThemeLabel(theme: CompanionGifTheme): string {
     </label>
     <div class="dialog-actions">
       <NButton class="quick-dialog-action gif-theme-custom-cancel" @click="closeCustomGifDialog">{{ text.common.cancel }}</NButton>
-      <NButton class="quick-dialog-action quick-dialog-submit gif-theme-custom-confirm" @click="confirmCustomGif">{{ text.common.confirm }}</NButton>
+      <NButton class="quick-dialog-action quick-dialog-submit gif-theme-custom-confirm" @click="confirmCustomGif">{{ text.common.save }}</NButton>
     </div>
   </section>
   </NModal>

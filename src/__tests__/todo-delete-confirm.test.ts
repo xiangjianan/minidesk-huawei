@@ -79,6 +79,8 @@ describe("todo delete confirmation", () => {
         expect(confirmButtonsVisible(wrapper), `第 ${nth} 次删除必须弹出确认`).toBe(true);
         await clickConfirm(wrapper, "companion-yes");
         expect(remainingTodos(wrapper)).toBe(4 - nth);
+        // 确认后的删除反馈经 180ms 替换动画落地（cdfc2ff），先等动画完成。
+        await vi.advanceTimersByTimeAsync(200);
         expect(bubbleText(wrapper)).toMatch(/已删|已移除|已清|删除完成/);
       }
     } finally {

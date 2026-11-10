@@ -659,6 +659,7 @@ describe("TodoPanel", () => {
     expect(dialog?.closest(".workbench-zone, .todo-panel")).toBeNull();
     (dialog?.querySelector(".todo-list-create-input") as HTMLInputElement | null)!.value = "工作提醒";
     dialog?.querySelector<HTMLInputElement>(".todo-list-create-input")?.dispatchEvent(new Event("input", { bubbles: true }));
+    await nextTick();
     dialog?.querySelector<HTMLButtonElement>(".todo-list-create-confirm")?.click();
     await nextTick();
 
@@ -709,6 +710,7 @@ describe("TodoPanel", () => {
 
     input!.value = "会议";
     input!.dispatchEvent(new Event("input", { bubbles: true }));
+    await nextTick();
     dialog?.querySelector<HTMLButtonElement>(".todo-list-create-confirm")?.click();
     await nextTick();
 
@@ -1794,7 +1796,7 @@ describe("TodoPanel", () => {
     expect(styles).toMatch(/\.todo-item\.is-starred\.is-done \.todo-input,[\s\S]*?text-decoration: line-through/s);
     expect(styles).toMatch(/\.todo-item\.is-starred\.is-done \.todo-input,[\s\S]*?animation: starred-text-flow/s);
     expect(styles).toMatch(/@keyframes starred-text-flow\s*\{[\s\S]*?background-position: 0% 50%[\s\S]*?background-position: -100% 50%/s);
-    expect(styles).toMatch(/\.todo-item\.is-starred \.todo-input::selection,[\s\S]*?\.today-focus-item \.today-focus-input::selection\s*\{[\s\S]*?-webkit-text-fill-color: #ffffff/s);
+    expect(styles).toMatch(/\.todo-item\.is-starred \.todo-input::selection,[\s\S]*?\.today-focus-item \.today-focus-input::selection\s*\{[\s\S]*?-webkit-text-fill-color: var\(--text\)/s);
   });
 
   it("uses an inset soft background for the reminder editing state", () => {
@@ -5252,6 +5254,17 @@ describe("TodoPanel 现在做这个入口", () => {
     await wrapper.get('[data-key="focus-now"]').trigger("click");
 
     expect(wrapper.emitted("focusNow")).toEqual([["morning", "t1"]]);
+    wrapper.unmount();
+  });
+
+  it("已开始专注的提醒显示继续和取消，并在零时长显示计时按钮", async () => {
+    const wrapper = mountFocusPanel({ morning: [{ id: "t1", text: "任务", done: false, focusStarted: true }], noon: [], evening: [] });
+    expect(wrapper.get(".todo-focus-badge").text()).toContain("0:00");
+    await wrapper.get(".todo-item").trigger("contextmenu");
+    expect(wrapper.get('[data-key="focus-now"]').text()).toBe("继续做这个");
+    expect(wrapper.get('[data-key="cancel-focus"]').text()).toBe("取消做这个");
+    await wrapper.get('[data-key="cancel-focus"]').trigger("click");
+    expect(wrapper.emitted("cancelFocus")?.[0]?.slice(0, 2)).toEqual(["morning", "t1"]);
     wrapper.unmount();
   });
 

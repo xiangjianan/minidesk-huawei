@@ -467,6 +467,7 @@ function normalizeTodo(item: unknown): TodoItem | null {
   if (isValidNotifyAt(notifyAt)) {
     todo.notifyAt = notifyAt;
   }
+  if (record.focusStarted === true) todo.focusStarted = true;
   // 「现在做这个」专注字段：只收正整数毫秒（同 quickButtons.clicks 口径），非法即丢。
   const focusElapsedMs = typeof record.focusElapsedMs === "number"
     && Number.isInteger(record.focusElapsedMs)

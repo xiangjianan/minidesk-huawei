@@ -94,7 +94,7 @@ export interface QuickButton {
   apiHeaders?: QuickApiHeader[];
   apiBodyType?: QuickApiBodyType;
   apiBody?: string;
-  /** 累计点击次数，点击 +1，以按钮右下角 ×N 显示；缺省 = 0。 */
+  /** 旧版本保留的点击次数，仅用于兼容已有数据。 */
   clicks?: number;
   hidden: boolean;
 }
@@ -106,6 +106,8 @@ export interface TodoItem {
   starred?: boolean;
   notifyAt?: number;
   deadlineAt?: number;
+  /** 已开始过专注，即使累计时间仍为零也可继续或取消。 */
+  focusStarted?: boolean;
   /** 「现在做这个」累计专注毫秒；仅 >0 时存在。 */
   focusElapsedMs?: number;
   /** 「现在做这个」随手记；与便签/空间 Tab 同构（含 marks 高亮元数据）。 */

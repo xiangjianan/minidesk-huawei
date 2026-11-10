@@ -106,7 +106,7 @@ describe("pickWorkbenchTipArea", () => {
   it.each(["zh", "en"] as const)("draws only from all four workbench tip pools in %s", language => {
     const messages = getGuideMessages(language);
     const total = ["images", "quickButtons", "todos", "workspace"].reduce((count, area) => count + messages[area as "images" | "quickButtons" | "todos" | "workspace"].length, 0);
-    const picks = Array.from({ length: total }, (_, index) => pickWorkbenchTipArea(messages, () => index / total));
+    const picks = Array.from({ length: total }, (_, index) => pickWorkbenchTipArea(messages, () => (index + 0.5) / total));
     expect(new Set(picks)).toEqual(new Set(["images", "quickButtons", "todos", "workspace"]));
     for (const area of ["images", "quickButtons", "todos", "workspace"] as const) {
       expect(picks.filter(pick => pick === area)).toHaveLength(messages[area].length);

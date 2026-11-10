@@ -18,6 +18,7 @@ const color = ref<string | null>(null);
 const customColor = ref('#80aed5');
 const attempted = ref(false);
 const duplicate = computed(() => props.tags.some(tag => tag.id !== id.value && tag.title.trim() === limitTitle(title.value)));
+const canSubmit = computed(() => Boolean(limitTitle(title.value)) && !duplicate.value);
 async function open(_anchor?: HTMLElement, tag?: QuickTag) {
   id.value = tag?.id;
   title.value = tag?.title ?? '';
@@ -40,14 +41,14 @@ defineExpose({ open });
 <template>
   <NModal v-model:show="show" preset="card" class="quick-dialog quick-list-dialog" :mask-closable="false" :title="id ? text.quick.editList : text.quick.newList" :aria-label="id ? text.quick.editList : text.quick.newList">
     <form class="quick-form" autocomplete="off" @submit.prevent="confirm">
-      <label><span>{{ text.quick.tagName }}</span><NInput ref="input" v-model:value="title" :maxlength="TITLE_MAX_LENGTH" show-count :status="attempted && duplicate ? 'error' : undefined" /></label>
-      <p v-if="attempted && duplicate" role="alert">{{ text.todo.duplicateList }}</p>
+      <label><span>{{ text.quick.tagName }}</span><NInput ref="input" v-model:value="title" :maxlength="TITLE_MAX_LENGTH" show-count :status="duplicate && (attempted || Boolean(limitTitle(title))) ? 'error' : undefined" /></label>
+      <p v-if="duplicate && (attempted || Boolean(limitTitle(title)))" role="alert">{{ text.todo.duplicateList }}</p>
       <fieldset class="quick-list-colors"><legend>{{ text.quick.buttonColor }}</legend>
         <button type="button" class="quick-color-none" :class="{ selected: color === null }" :aria-label="text.quick.noColor" :title="text.quick.noColor" :aria-pressed="color === null" @click="color = null">∅</button>
         <button v-for="swatch in QUICK_COLORS" :key="swatch" type="button" class="quick-color-swatch" :class="{ selected: color === swatch }" :style="{ '--quick-list-color': swatch }" :aria-label="swatch" :aria-pressed="color === swatch" @click="color = swatch" />
         <label class="quick-color-custom"><span class="quick-color-custom-preview" :style="{ '--quick-list-color': customColor }"><input v-model="customColor" type="color" :aria-label="text.quick.customColor" @input="color = ($event.target as HTMLInputElement).value" /></span><span class="quick-color-custom-label">{{ text.quick.customColor }}</span></label>
       </fieldset>
-      <div class="dialog-actions"><NButton @click="show = false">{{ text.common.cancel }}</NButton><NButton class="quick-dialog-submit" attr-type="submit">{{ text.common.save }}</NButton></div>
+      <div class="dialog-actions"><NButton @click="show = false">{{ text.common.cancel }}</NButton><NButton class="quick-dialog-submit" attr-type="submit" :disabled="!canSubmit">{{ text.common.save }}</NButton></div>
     </form>
   </NModal>
 </template>

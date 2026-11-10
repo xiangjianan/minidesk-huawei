@@ -36,16 +36,6 @@ export function toggleQuickHiddenVisibility(workspace: Pick<WorkspaceData, "quic
   for (const tag of workspace.quickTags) delete tag.showHidden;
 }
 
-/** 显示真实累计次数；旧数据中的无效值按零处理。 */
-export function quickButtonClickCount(clicks: unknown): number {
-  return typeof clicks === "number" && Number.isFinite(clicks) ? Math.max(0, Math.floor(clicks)) : 0;
-}
-
-/** 该快捷按钮使用计数 +1（按钮级：点谁计谁，未分组按钮同样计数）。 */
-export function recordQuickButtonClick(button: QuickButton): void {
-  button.clicks = (button.clicks ?? 0) + 1;
-}
-
 /** 各工作区按钮的现行使用计数快照（撤销恢复前捕获，恢复后回填）。 */
 export function captureQuickButtonClicks(state: BoardState): Record<string, Record<string, number>> {
   const captured: Record<string, Record<string, number>> = {};

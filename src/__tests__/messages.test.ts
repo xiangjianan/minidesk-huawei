@@ -56,6 +56,7 @@ const messageKeys = [
   "confirmDeleteQuick",
   "confirmDeleteQuickTag",
   "confirmDeleteQuickTagWithButtons",
+  "confirmCancelFocus",
   "confirmDeleteTodo",
   "confirmDeleteTodoList",
   "confirmDeleteSpace",

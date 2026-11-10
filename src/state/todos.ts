@@ -216,7 +216,13 @@ export function cloneTodoMap(todos: TodoMap): TodoMap {
 }
 
 /** focusNotes/focusImages 数组按引用收归状态所有，调用方不得复用或原地修改。 */
+export function hasTodoFocus(todo: TodoItem | undefined): boolean {
+  return Boolean(todo && (todo.focusStarted || (todo.focusElapsedMs ?? 0) > 0 || todo.focusNotes?.length || todo.focusImages?.length));
+}
+
 export interface TodoFocusPatch {
+  focusStarted?: boolean;
+  resetFocus?: boolean;
   /** 增量合并进 focusElapsedMs（毫秒）。 */
   addElapsedMs?: number;
   /** 整体替换；空数组删除字段。 */
@@ -235,6 +241,16 @@ export function updateTodoFocus(
   const next = cloneTodoMap(todos);
   const todo = next[period]?.find((item) => item.id === id);
   if (!todo) return todos;
+  if (patch.resetFocus) {
+    delete todo.focusStarted;
+    delete todo.focusElapsedMs;
+    delete todo.focusNotes;
+    delete todo.focusImages;
+  }
+  if (patch.focusStarted !== undefined) {
+    if (patch.focusStarted) todo.focusStarted = true;
+    else delete todo.focusStarted;
+  }
   if (patch.addElapsedMs !== undefined) {
     const merged = Math.max(0, Math.round((todo.focusElapsedMs ?? 0) + patch.addElapsedMs));
     if (merged > 0) todo.focusElapsedMs = merged;

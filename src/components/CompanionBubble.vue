@@ -353,7 +353,7 @@ watch(
   () => props.sequence,
   (sequence) => {
     window.clearTimeout(replacementTimer.value);
-    if (!popoverVisible.value || !delayedPopoverVisible.value || props.confirm || renderedConfirm.value) {
+    if (!popoverVisible.value || !delayedPopoverVisible.value || props.confirm) {
       renderedSequence = sequence;
       replacingPopover.value = false;
       syncRenderedContent();

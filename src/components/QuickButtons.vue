@@ -31,7 +31,7 @@ import type { AppLanguage, GuideKey, QuickApiBodyType, QuickApiHeader, QuickApiM
 import { GUIDE_MENU_OPTION } from "../state/defaults";
 import { getIconHeadingText, getUiText } from "../state/i18n";
 import type { QuickButtonGroup } from "../state/quickButtons";
-import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, quickButtonClickCount, QUICK_BUTTON_OTHER_GROUP_ID, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
+import { buildVisibleQuickButtonGroups, filterVisibleQuickButtonGroups, groupQuickButtonsByColumn, hasOverloadedVisibleQuickButtonGroup, QUICK_BUTTON_OTHER_GROUP_ID, QUICK_BUTTON_EMPTY_GROUP_ID, QUICK_DENSITY_THRESHOLD } from "../state/quickButtons";
 import { findQuickAppPresetByScheme, getQuickAppPresetHint, getQuickAppPresetTitle, getQuickShortcutName, QUICK_APP_PRESETS } from "../state/quickApps";
 import { findQuickApiTemplate, QUICK_API_TEMPLATES } from "../state/quickApiTemplates";
 import { globalSearchNormalized, globalSearchQuery } from "../state/globalSearch";
@@ -385,10 +385,6 @@ function getQuickTagTitle(tagId?: string): string {
   return props.tags.find((tag) => tag.id === tagId)?.title ?? "";
 }
 
-/** 按钮的真实累计点击次数。 */
-function buttonUsage(button: QuickButton): number {
-  return quickButtonClickCount(button.clicks);
-}
 
 function setQuickType(type: QuickButtonType): void {
   form.type = type;
@@ -1019,9 +1015,11 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
                 <span class="quick-button-content">
                   <HighlightText class="quick-button-label" :text="button.title" :query="globalSearchQuery" />
                 </span>
-                <span v-if="buttonUsage(button) > 0" class="quick-button-clicks">×{{ buttonUsage(button) }}</span>
               </button>
             </MemoTransitionGroup>
+            <div v-if="!globalSearchNormalized && group.title && group.id === groupedButtons.at(-1)?.id && group.buttons.length === 0 && !buttons.some(button => (button.tagId ?? QUICK_BUTTON_OTHER_GROUP_ID) === group.id)" class="workbench-empty-hint quick-empty-hint">
+              <span>{{ uiText.quick.emptyHint }}</span>
+            </div>
             </div>
           </div>
         </section>

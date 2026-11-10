@@ -539,7 +539,7 @@ describe("SettingsMenu", () => {
 
     await wrapper.find('[data-key="gif-theme:custom"]').trigger("click");
     const actions = wrapper.get(".gif-theme-custom-dialog .dialog-actions").findAll("button");
-    expect(actions.map((button) => button.text())).toEqual(["取消", "确定"]);
+    expect(actions.map((button) => button.text())).toEqual(["取消", "保存"]);
     expect(actions[0].classes()).toContain("quick-dialog-action");
     expect(actions[1].classes()).toContain("quick-dialog-submit");
     const uploads = wrapper.findAllComponents(uploadStub);

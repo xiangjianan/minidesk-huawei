@@ -93,6 +93,18 @@ describe("updateTodoFocus", () => {
     expect(next.morning[0].focusElapsedMs).toBe(1_000);
   });
 
+  it("零时长的已开始状态可持久化，取消后清除专注内容", () => {
+    const started = updateTodoFocus(base, "morning", "t1", { focusStarted: true });
+    const state = defaultState();
+    state.workspaces[0].todos.morning = started.morning;
+    const restored = normalizeImportedState(JSON.parse(JSON.stringify(getSerializableState(state))));
+    expect(restored.workspaces[0].todos.morning[0].focusStarted).toBe(true);
+    const seeded = { morning: [{ ...started.morning[0], focusElapsedMs: 5000, focusNotes: [{ text: "笔记", indent: 0 }], focusImages: [{ id: "img", createdAt: 1 }] }] };
+    const cleared = updateTodoFocus(seeded, "morning", "t1", { resetFocus: true });
+    expect(cleared.morning[0]).toEqual(base.morning[0]);
+    expect(seeded.morning[0].focusNotes).toHaveLength(1);
+  });
+
   it("任务不存在时原样返回（引用相等）", () => {
     expect(updateTodoFocus(base, "morning", "nope", { addElapsedMs: 1 })).toBe(base);
   });

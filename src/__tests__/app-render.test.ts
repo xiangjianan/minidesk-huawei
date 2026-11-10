@@ -257,7 +257,7 @@ describe("App shell", () => {
     expect(wrapper.find(".image-empty").exists()).toBe(false);
     expect(wrapper.find(".empty-hint").exists()).toBe(false);
     expect(wrapper.find(".todo-empty-hint").text()).toBe("");
-    expect(wrapper.findAll("textarea").every((textarea) => !textarea.attributes("placeholder"))).toBe(true);
+    expect(wrapper.get(".space-text-panel textarea").attributes("placeholder")).toBe("记录想法、笔记");
 
     wrapper.unmount();
   });
@@ -381,6 +381,29 @@ describe("App shell", () => {
       wrapper.unmount();
       vi.useRealTimers();
     }
+  });
+
+  it("clicking blank space after typing only blurs the reminder; the add button still creates one", async () => {
+    const wrapper = mountApp();
+    try {
+      const blank = wrapper.get('[data-testid="todo-list-morning"]');
+      await blank.trigger("click");
+      await wrapper.vm.$nextTick();
+      const input = wrapper.get('[data-testid="todo-input-morning"]');
+      await input.setValue("已输入的提醒");
+      expect(document.activeElement).toBe(input.element);
+      // A real pointer click blurs the input between pointerdown and click.
+      await blank.trigger("pointerdown");
+      (input.element as HTMLInputElement).blur();
+      await blank.trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.findAll('[data-testid="todo-input-morning"]')).toHaveLength(1);
+      expect((wrapper.get('[data-testid="todo-input-morning"]').element as HTMLInputElement).value).toBe("已输入的提醒");
+      expect(document.activeElement).not.toBe(input.element);
+      await wrapper.get('.todo-section[data-list-id="morning"] .todo-add-row').trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.findAll('[data-testid="todo-input-morning"]')).toHaveLength(2);
+    } finally { wrapper.unmount(); }
   });
 
   it("cancels the pending blank reminder from same-list blank space even after the input lost focus", async () => {
@@ -1155,7 +1178,7 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("shows an empty editor Tips bubble on focus and the save bubble on Ctrl+S", async () => {
+  it("does not show Tips in an empty editor, and still shows the save bubble on Ctrl+S", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
     const wrapper = mountApp();
@@ -1163,13 +1186,9 @@ describe("App shell", () => {
     try {
       await wrapper.get("textarea").trigger("focus");
 
-      expect(wrapper.find(".focus-companion.is-visible img").exists()).toBe(true);
-      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-
       await vi.advanceTimersByTimeAsync(200);
       await wrapper.vm.$nextTick();
-
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/工作空间|空间标签|缩进|步骤/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
 
       window.dispatchEvent(
         new KeyboardEvent("keydown", {
@@ -1194,6 +1213,8 @@ describe("App shell", () => {
     vi.useFakeTimers();
     // 指南气泡的文案是从数组里随机挑的：固定随机数，让首个气泡可断言。
     vi.spyOn(Math, "random").mockReturnValue(0);
+    // Keep another area populated so automatic empty-area tips remain enabled.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"), quickButtons: [{ id: "seed", title: "Seed", value: "text", type: "text" }] }));
     const wrapper = mountApp();
 
     try {
@@ -1229,6 +1250,8 @@ describe("App shell", () => {
 
   it("does not hide and re-show the GIF as a Tips message expires", async () => {
     vi.useFakeTimers();
+    // Keep another area populated so automatic empty-area tips remain enabled.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"), quickButtons: [{ id: "seed", title: "Seed", value: "text", type: "text" }] }));
     const wrapper = mountApp();
     try {
       await wrapper.get("textarea").trigger("focus");
@@ -2273,6 +2296,8 @@ describe("App shell", () => {
   });
 
   it("does not show the companion GIF after toggling the theme", async () => {
+    // Keep another area populated so automatic empty-area tips remain enabled.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"), quickButtons: [{ id: "seed", title: "Seed", value: "text", type: "text" }] }));
     const wrapper = mountApp();
 
     await wrapper.get("textarea").trigger("focus");
@@ -4074,7 +4099,7 @@ describe("App shell", () => {
     wrapper.unmount();
   });
 
-  it("点击快捷按钮给该按钮使用计数 +1 并落盘（未分组按钮同样计数）", async () => {
+  it("点击快捷按钮不会记录使用次数", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -4099,10 +4124,9 @@ describe("App shell", () => {
     await Promise.resolve();
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    expect(stored.workspaces[0].quickTags).toHaveLength(1);
-    expect(stored.workspaces[0].quickTags[0]).not.toHaveProperty("clicks");
-    expect(stored.workspaces[0].quickButtons[0].clicks).toBe(1);
-    expect(stored.workspaces[0].quickButtons[1].clicks).toBe(1);
+    expect(stored.quickButtons).toHaveLength(2);
+    expect(stored.quickButtons[0]).not.toHaveProperty("clicks");
+    expect(stored.quickButtons[1]).not.toHaveProperty("clicks");
     wrapper.unmount();
   });
 
@@ -5877,6 +5901,73 @@ describe("App shell", () => {
     }
   });
 
+  it("取消专注需确认，确认后清除计时和内容并延迟回收图片", async () => {
+    vi.useFakeTimers();
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ todos: { morning: [{
+      id: "t1", text: "专注任务", done: false, focusStarted: true, focusElapsedMs: 5000,
+      focusNotes: [{ id: "note-1", text: "笔记" }],
+      focusImages: [{ id: "img-1", payloadId: "pay-1", createdAt: 9 }],
+    }] } }));
+    const deleteSpy = vi.spyOn(imageState, "deleteStoredImage").mockResolvedValue(undefined);
+    const wrapper = mountApp();
+    try {
+      const panel = wrapper.getComponent(TodoPanel);
+      const anchor = wrapper.get(".todo-item").element as HTMLElement;
+      panel.vm.$emit("cancelFocus", "morning", "t1", anchor);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      expect(wrapper.get('[data-testid="companion-yes"]').text()).toContain("取消做这个");
+      await wrapper.get('[data-testid="companion-no"]').trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(panel.props("todos").morning[0].focusElapsedMs).toBe(5000);
+      panel.vm.$emit("cancelFocus", "morning", "t1", anchor);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await flushPromises();
+      const todo = panel.props("todos").morning[0];
+      expect(todo).not.toHaveProperty("focusStarted");
+      expect(todo).not.toHaveProperty("focusElapsedMs");
+      expect(todo).not.toHaveProperty("focusNotes");
+      expect(todo).not.toHaveProperty("focusImages");
+      await vi.advanceTimersByTimeAsync(8500);
+      expect(deleteSpy).toHaveBeenCalledWith("pay-1");
+    } finally { wrapper.unmount(); restoreIndexedDb(); vi.useRealTimers(); }
+  });
+
+  it("撤销取消专注会恢复计时、笔记和贴图，并保留图片载荷", async () => {
+    vi.useFakeTimers();
+    const restoreIndexedDb = installMemoryImageDb();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ todos: { morning: [{
+      id: "t1", text: "专注任务", done: false, focusStarted: true, focusElapsedMs: 5000,
+      focusNotes: [{ id: "note-1", text: "笔记" }],
+      focusImages: [{ id: "img-1", payloadId: "pay-1", createdAt: 9 }],
+    }] } }));
+    const deleteSpy = vi.spyOn(imageState, "deleteStoredImage").mockResolvedValue(undefined);
+    const wrapper = mountApp();
+    try {
+      const panel = wrapper.getComponent(TodoPanel);
+      const anchor = wrapper.get(".todo-item").element as HTMLElement;
+      panel.vm.$emit("cancelFocus", "morning", "t1", anchor);
+      await wrapper.vm.$nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await flushPromises();
+      await vi.advanceTimersByTimeAsync(200);
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toContain("取消做这个成功");
+      await wrapper.get('[data-testid="companion-action"]').trigger("click");
+      await flushPromises();
+      expect(panel.props("todos").morning[0]).toMatchObject({
+        focusStarted: true, focusElapsedMs: 5000,
+        focusNotes: [{ text: "笔记" }],
+        focusImages: [{ id: "img-1", payloadId: "pay-1", createdAt: 9 }],
+      });
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(deleteSpy).not.toHaveBeenCalledWith("pay-1");
+    } finally { wrapper.unmount(); restoreIndexedDb(); vi.useRealTimers(); }
+  });
+
   it("「现在做这个」端到端：跨 checkpoint 计时落盘、关窗落徽标、重开续跳不归零", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-02T09:00:00Z").getTime());
@@ -5894,6 +5985,8 @@ describe("App shell", () => {
       await flushPromises();
       await wrapper.vm.$nextTick();
       expect(wrapper.get(".focus-now-timer").text()).toBe("0:00:00");
+      expect(wrapper.get(".todo-focus-badge").text()).toContain("0:00");
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}").workspaces[0].todos.morning[0].focusStarted).toBe(true);
 
       // 前进 90s（跨过 60s checkpoint）：App 把首段增量落盘，弹窗计时继续推进。
       await vi.advanceTimersByTimeAsync(90_000);
@@ -6108,6 +6201,30 @@ describe("App shell", () => {
     }
   });
 
+  it("其他窗口取消专注后关闭本窗口会话，不重新写入计时", async () => {
+    vi.useFakeTimers();
+    const workspace = defaultWorkspace();
+    workspace.todos = { morning: [{ id: "t1", text: "任务", done: false, focusStarted: true, focusElapsedMs: 5000 }] };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ sync: { revision: 1, clientId: "a" }, workspaces: [workspace] }));
+    const wrapper = mountApp();
+    try {
+      wrapper.getComponent(TodoPanel).vm.$emit("focusNow", "morning", "t1");
+      await flushPromises();
+      expect(wrapper.find(".focus-now-timer").exists()).toBe(true);
+      const newer = structuredClone(workspace);
+      delete newer.todos.morning[0].focusStarted;
+      delete newer.todos.morning[0].focusElapsedMs;
+      const raw = JSON.stringify({ sync: { revision: 2, clientId: "b" }, workspaces: [newer] });
+      localStorage.setItem(STORAGE_KEY, raw);
+      window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: raw }));
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find(".focus-now-timer").exists()).toBe(false);
+      await vi.advanceTimersByTimeAsync(61_000);
+      expect(wrapper.getComponent(TodoPanel).props("todos").morning[0].focusElapsedMs).toBeUndefined();
+    } finally { wrapper.unmount(); vi.useRealTimers(); }
+  });
+
   it("专注笔记失焦立即保存，供其他窗口同步", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ todos: { morning: [{ id: "t1", text: "任务", done: false }] } }));
     const wrapper = mountApp();
@@ -6309,6 +6426,58 @@ describe("App shell", () => {
       wrapper.unmount();
       restoreIndexedDb();
     }
+  });
+
+  it("导出并重新导入未打开的专注图片，图片载荷可在新空间中恢复", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
+    let exportedBlob: Blob | undefined;
+    Object.assign(URL, { createObjectURL: vi.fn((blob: Blob) => { exportedBlob = blob; return "blob:export"; }), revokeObjectURL: vi.fn() });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const workspace = defaultWorkspace();
+    workspace.todos.morning = [{ id: "t1", text: "带专注图片", done: false, focusStarted: true,
+      focusImages: [{ id: "focus-image", payloadId: "focus-payload", createdAt: 9 }] }];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...defaultState(), workspaces: [workspace] }));
+    await storeImagePayload({ id: "focus-image", payloadId: "focus-payload", src: "data:image/png;base64,Zm9jdXM=", createdAt: 9 });
+    const wrapper = mountApp();
+    try {
+      await flushPromises();
+      wrapper.getComponent(SettingsMenu).vm.$emit("exportWorkspace");
+      await nextTick();
+      (document.querySelector('[data-testid="confirm-workspace-export"]') as HTMLElement).click();
+      await vi.waitFor(() => expect(exportedBlob).toBeDefined());
+      const content = await exportedBlob!.text();
+      expect(JSON.parse(content).workspace.todos.morning[0].focusImages[0].src).toBe("data:image/png;base64,Zm9jdXM=");
+      wrapper.getComponent(SettingsMenu).vm.$emit("import");
+      const input = wrapper.get('input[type="file"]').element as HTMLInputElement;
+      Object.defineProperty(input, "files", { value: [new File([content], "backup.json", { type: "application/json" })], configurable: true });
+      await wrapper.get('input[type="file"]').trigger("change");
+      await vi.waitFor(() => expect(document.querySelector('[data-testid="import-add"]')).not.toBeNull());
+      (document.querySelector('[data-testid="import-add"]') as HTMLElement).click();
+      await vi.waitFor(() => expect(loadState().workspaces).toHaveLength(2));
+      const imported = loadState().workspaces[1].todos.morning[0].focusImages![0];
+      expect(imported.payloadId).not.toBe("focus-payload");
+      await expect(getStoredImagePayload(imported)).resolves.toBe("data:image/png;base64,Zm9jdXM=");
+    } finally { wrapper.unmount(); restoreIndexedDb(); }
+  });
+
+  it("无法读取专注图片时不生成缺少图片的空间备份", async () => {
+    const restoreIndexedDb = installMemoryImageDb();
+    const createObjectURL = vi.fn(() => "blob:export");
+    Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
+    const workspace = defaultWorkspace();
+    workspace.todos.morning = [{ id: "t1", text: "缺少图片", done: false,
+      focusImages: [{ id: "missing", payloadId: "missing-payload", createdAt: 9 }] }];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...defaultState(), workspaces: [workspace] }));
+    const wrapper = mountApp();
+    try {
+      await flushPromises();
+      wrapper.getComponent(SettingsMenu).vm.$emit("exportWorkspace");
+      await nextTick();
+      (document.querySelector('[data-testid="confirm-workspace-export"]') as HTMLElement).click();
+      await vi.waitFor(() => expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(true));
+      expect(createObjectURL).not.toHaveBeenCalled();
+      expect(document.querySelector('[data-testid="confirm-workspace-export"]')).not.toBeNull();
+    } finally { wrapper.unmount(); restoreIndexedDb(); }
   });
 
   it("导入带 focusImages 内联载荷的工作区时把载荷写入 IndexedDB", async () => {
@@ -7000,7 +7169,7 @@ describe("App shell", () => {
       expect(loadState().workspaces.find(workspace => workspace.id === "other")?.spaces[0].lines[0].text).toBe("保留其他空间");
       // in-memory board reset to defaults
       expect(wrapper.text()).not.toContain("待清空");
-      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/清空|已重置|数据|初始|清理|整理/);
+      expect(wrapper.find('[data-testid="companion-confirm"]').text()).toMatch(/清除成功/);
       // the workbench shell remounts so its entrance animation replays
       const gridAfter = wrapper.find(".workbench-grid").element;
       expect(gridAfter).not.toBe(gridBefore);
@@ -7009,6 +7178,36 @@ describe("App shell", () => {
       vi.unstubAllGlobals();
       vi.useRealTimers();
     }
+  });
+
+  it("撤销清空空间会恢复内容、贴图和布局", async () => {
+    vi.useFakeTimers();
+    const restoreIndexedDb = installMemoryImageDb();
+    const workspace = defaultWorkspace();
+    workspace.images = [{ id: "image-1", src: "data:image/png;base64,YQ==", createdAt: 1 }];
+    workspace.todos.morning = [{ id: "t1", text: "提醒", done: false, focusStarted: true, focusNotes: [{ text: "专注笔记", indent: 0 }], focusImages: [{ id: "focus-image", payloadId: "focus-payload", createdAt: 2 }] }];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...defaultState(), workspaces: [workspace] }));
+    localStorage.setItem(`mini-desk-workbench-widths:${workspace.id}`, JSON.stringify([10, 20, 30, 40]));
+    const deleteSpy = vi.spyOn(imageState, "deleteStoredImage").mockResolvedValue(undefined);
+    const wrapper = mountApp();
+    try {
+      wrapper.getComponent(SettingsMenu).vm.$emit("clearData");
+      await nextTick();
+      await vi.advanceTimersByTimeAsync(200);
+      await wrapper.get('[data-testid="companion-yes"]').trigger("click");
+      await flushPromises();
+      await vi.advanceTimersByTimeAsync(200);
+      expect(wrapper.get('[data-testid="companion-confirm"]').text()).toMatch(/清除成功/);
+      expect(wrapper.find('[data-testid="companion-action"]').exists()).toBe(true);
+      await wrapper.get('[data-testid="companion-action"]').trigger("click");
+      await flushPromises();
+      const restored = loadState().workspaces[0];
+      expect(restored.todos.morning[0]).toMatchObject({ text: "提醒", focusStarted: true, focusNotes: [{ text: "专注笔记" }], focusImages: [{ payloadId: "focus-payload" }] });
+      expect(restored.images[0].id).toBe("image-1");
+      expect(JSON.parse(localStorage.getItem(`mini-desk-workbench-widths:${workspace.id}`)!)).toEqual([1000, 2000, 3000, 4000]);
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(deleteSpy).not.toHaveBeenCalledWith("focus-payload");
+    } finally { wrapper.unmount(); restoreIndexedDb(); vi.useRealTimers(); }
   });
 
   it("accepts imports that only configure reminder lists", async () => {
@@ -7929,6 +8128,8 @@ describe("App shell", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-20T00:00:00.000Z"));
     vi.spyOn(Math, "random").mockReturnValue(0);
+    // Keep another area populated so automatic empty-area tips remain enabled.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"), quickButtons: [{ id: "seed", title: "Seed", value: "text", type: "text" }] }));
     const wrapper = mountApp();
 
     try {
@@ -7979,70 +8180,16 @@ describe("App shell", () => {
     }
   });
 
-  it("keeps the current blank-area Tips for quick links, images, and todos while repeated clicks happen before expiry", async () => {
-    vi.useFakeTimers();
+  it("does not show automatic Tips when all four areas are empty", async () => {
+    const wrapper = mountApp();
     try {
-      const scenarios = [
-        { key: "quickButtons", component: QuickButtons, pattern: /快捷|按钮|复制|动作/ },
-        { key: "images", component: ImagePanel, pattern: /截图区|图片|Ctrl\+V|方向键|右键|删除|预览|Esc/ },
-        { key: "todos", component: TodoPanel, pattern: /提醒|事项|完成|星标|右键|拖动|已完成/ },
-      ] as const;
-
-      for (const scenario of scenarios) {
-        const randomSpy = vi.spyOn(Math, "random");
-        randomSpy
-          .mockReturnValueOnce(0)
-          .mockReturnValueOnce(0)
-          .mockReturnValueOnce(0.8)
-          .mockReturnValueOnce(0.8);
-        const wrapper = mountApp();
-
-        try {
-          const component = wrapper.getComponent(scenario.component);
-          vi.spyOn(component.element, "getBoundingClientRect").mockReturnValue({
-            x: 128,
-            y: 0,
-            width: 300,
-            height: 360,
-            top: 0,
-            left: 128,
-            right: 428,
-            bottom: 360,
-            toJSON: () => ({}),
-          });
-
-          component.vm.$emit("guide", scenario.key, component.element as HTMLElement);
-          await wrapper.vm.$nextTick();
-          await vi.advanceTimersByTimeAsync(200);
-          await wrapper.vm.$nextTick();
-          const firstTips = wrapper.get('[data-testid="companion-confirm"]').text();
-          expect(firstTips).toMatch(scenario.pattern);
-
-          component.vm.$emit("guide", scenario.key, component.element as HTMLElement);
-          await wrapper.vm.$nextTick();
-          await vi.advanceTimersByTimeAsync(200);
-          await wrapper.vm.$nextTick();
-
-          expect(wrapper.get('[data-testid="companion-confirm"]').text()).toBe(firstTips);
-
-          await vi.advanceTimersByTimeAsync(4860);
-          await wrapper.vm.$nextTick();
-          expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
-
-          component.vm.$emit("guide", scenario.key, component.element as HTMLElement);
-          await wrapper.vm.$nextTick();
-          await vi.advanceTimersByTimeAsync(200);
-          await wrapper.vm.$nextTick();
-
-          expect(wrapper.get('[data-testid="companion-confirm"]').text()).not.toBe(firstTips);
-        } finally {
-          wrapper.unmount();
-          randomSpy.mockRestore();
-        }
+      for (const [componentType, key] of [[QuickButtons, "quickButtons"], [ImagePanel, "images"], [TodoPanel, "todos"], [SpacePanel, "workspace"]] as const) {
+        const component = wrapper.getComponent(componentType);
+        component.vm.$emit("guide", key, component.element as HTMLElement);
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('[data-testid="companion-confirm"]').exists()).toBe(false);
       }
-    } finally {
-      vi.useRealTimers();
-    }
+    } finally { wrapper.unmount(); }
   });
 
   it("keeps quick-link Tips when focusing the notebook until expiry", async () => {
@@ -8269,6 +8416,8 @@ describe("App shell", () => {
   });
 
   it("moves the companion to the screen corner when the todo section is focused", async () => {
+    // Keep another area populated so automatic empty-area tips remain enabled.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"), quickButtons: [{ id: "seed", title: "Seed", value: "text", type: "text" }] }));
     const wrapper = mountApp();
     const todoList = wrapper.get('[data-testid="todo-list-morning"]');
 
@@ -8579,6 +8728,8 @@ describe("App shell", () => {
     vi.useFakeTimers();
     // 从明确的浅色起始态切换，验证「浅→深」GIF 资产切换不受默认 auto 模式影响。
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme: "light" }));
+    // Keep another area populated so automatic empty-area tips remain enabled.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"), quickButtons: [{ id: "seed", title: "Seed", value: "text", type: "text" }] }));
     const wrapper = mountApp();
 
     try {
@@ -8788,6 +8939,8 @@ describe("App shell", () => {
 
   it("clears the in-flight bubble immediately when the gif theme switches to none", async () => {
     vi.useFakeTimers();
+    // Keep another area populated so automatic empty-area tips remain enabled.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"), quickButtons: [{ id: "seed", title: "Seed", value: "text", type: "text" }] }));
     const wrapper = mountApp();
 
     try {
@@ -8809,6 +8962,8 @@ describe("App shell", () => {
       vi.useRealTimers();
     }
   });
+
+
 
 
 

@@ -23,6 +23,26 @@ afterEach(() => {
 });
 
 describe("WorkbenchShell", () => {
+  it("keeps the empty message above the workbench without blocking interaction", () => {
+    const css = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
+    expect(css).toMatch(/\.empty-workbench-message\s*\{[^}]*z-index:\s*1[^}]*pointer-events:\s*none/s);
+  });
+
+  it("shows the empty message only when all areas and the header are hidden", async () => {
+    const hidden = { assets: false, notes: false, tasks: false, workspace: false };
+    const wrapper = mount(WorkbenchShell, { props: { title: "MiniDesk", saveStatusLabel: "", zoneVisibility: hidden } });
+    expect(wrapper.find("[data-testid=empty-workbench-message]").exists()).toBe(false);
+    await wrapper.get("[data-testid=workbench-header-hide]").trigger("click");
+    expect(wrapper.get("[data-testid=empty-workbench-message]").text()).toBe("这里什么都没有，像刚开始的时候");
+    await wrapper.setProps({ language: "en" });
+    expect(wrapper.get("[data-testid=empty-workbench-message]").text()).toBe("There is nothing here, just like when it all began.");
+    await wrapper.setProps({ zoneVisibility: { ...hidden, assets: true } });
+    expect(wrapper.find("[data-testid=empty-workbench-message]").exists()).toBe(false);
+    await wrapper.setProps({ zoneVisibility: hidden });
+    await wrapper.get("[data-testid=workbench-header-show]").trigger("click");
+    expect(wrapper.find("[data-testid=empty-workbench-message]").exists()).toBe(false);
+    wrapper.unmount();
+  });
   it("captures scrolling from all four slot regions and clears activity on unmount", async () => {
     vi.useFakeTimers();
     const wrapper = mount(WorkbenchShell, {

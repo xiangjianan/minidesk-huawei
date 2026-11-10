@@ -14,8 +14,6 @@ import {
   groupQuickButtonsByColumn,
   hasOverloadedVisibleQuickButtonGroup,
   QUICK_BUTTON_OTHER_GROUP_ID,
-  quickButtonClickCount,
-  recordQuickButtonClick,
   reorderQuickButton,
   toggleQuickHiddenVisibility,
 } from "../state/quickButtons";
@@ -148,6 +146,22 @@ function readSource(path: string): string {
 }
 
 describe("QuickButtons", () => {
+  it("guides the last empty list even when earlier lists have actions", async () => {
+    const wrapper = mountQuickButtons({
+      tags: [{ id: "first", title: "常用" }, { id: "last", title: "工作" }],
+      buttons: [{ id: "one", title: "链接", value: "https://example.com", type: "link", hidden: false, tagId: "first" }],
+    });
+    try {
+      expect(wrapper.find('[data-tag-id="first"] .quick-empty-hint').exists()).toBe(false);
+      expect(wrapper.get('[data-tag-id="last"] .quick-empty-hint').text()).toContain("添加快捷动作");
+      await wrapper.setProps({ buttons: [
+        { id: "one", title: "链接", value: "https://example.com", type: "link", hidden: false, tagId: "first" },
+        { id: "two", title: "文本", value: "内容", type: "text", hidden: false, tagId: "last" },
+      ] });
+      expect(wrapper.find(".quick-empty-hint").exists()).toBe(false);
+    } finally { wrapper.unmount(); }
+  });
+
   it("keeps the overflow scrollbar visible independently of hover", () => {
     const wrapper = mountQuickButtons();
     expect(wrapper.findComponent({ name: "Scrollbar" }).props("trigger")).toBe("none");
@@ -200,7 +214,7 @@ describe("QuickButtons", () => {
       expect(wrapper.findAll(".quick-button")).toHaveLength(600);
       await wrapper.setProps({ buttons: buttons.map((button, i) => i === 0 ? { ...button, title: "Edited action", clicks: 7 } : button) });
       expect(wrapper.get('.quick-button[data-id="button-0"]').text()).toContain("Edited action");
-      expect(wrapper.get('.quick-button[data-id="button-0"]').text()).toContain("×7");
+      expect(wrapper.get('.quick-button[data-id="button-0"]').text()).not.toContain("×7");
     } finally {
       spy.mockRestore();
       wrapper.unmount();
@@ -295,29 +309,6 @@ describe("QuickButtons", () => {
     expect(hasOverloadedVisibleQuickButtonGroup([...visibleButtons.slice(0, 12), ...hiddenButtons], tags, 12)).toBe(false);
   });
 
-  it("显示真实点击次数并兼容无效历史值", () => {
-    expect(quickButtonClickCount(undefined)).toBe(0);
-    expect(quickButtonClickCount(0)).toBe(0);
-    expect(quickButtonClickCount(1)).toBe(1);
-    expect(quickButtonClickCount(50)).toBe(50);
-    expect(quickButtonClickCount(100)).toBe(100);
-    expect(quickButtonClickCount(132)).toBe(132);
-    expect(quickButtonClickCount(-3)).toBe(0);
-    expect(quickButtonClickCount(2.5)).toBe(2);
-    expect(quickButtonClickCount("x" as unknown)).toBe(0);
-    expect(quickButtonClickCount(NaN)).toBe(0);
-    expect(quickButtonClickCount(Infinity)).toBe(0);
-  });
-
-  it("按钮点击计数 +1：缺省 0→1，已有值 41→42", () => {
-    const fresh: QuickButton = { id: "b1", title: "B", value: "v", type: "text", hidden: false };
-    recordQuickButtonClick(fresh);
-    expect(fresh.clicks).toBe(1);
-    const seeded: QuickButton = { id: "b2", title: "B2", value: "v", type: "text", hidden: false, clicks: 41 };
-    recordQuickButtonClick(seeded);
-    expect(seeded.clicks).toBe(42);
-  });
-
   it("组构建不为标签组携带 usagePercent（染色下沉到按钮级）", () => {
     const groups = buildVisibleQuickButtonGroups(
       [
@@ -337,18 +328,12 @@ describe("QuickButtons", () => {
     expect(groups[1]).not.toHaveProperty("usagePercent");
   });
 
-  it("shows quiet real click counts without changing the button background", async () => {
+  it("does not display legacy click counts", () => {
     const wrapper = mountQuickButtons({ buttons: [
       { id: "used", title: "Used", value: "a", type: "text", hidden: false, clicks: 10 },
-      { id: "unused", title: "Unused", value: "b", type: "text", hidden: false },
-      { id: "many", title: "Many", value: "c", type: "text", hidden: false, clicks: 1234 },
     ] });
-    expect(wrapper.get('[data-id="used"] .quick-button-clicks').text()).toBe("×10");
-    expect(wrapper.find('[data-id="unused"] .quick-button-clicks').exists()).toBe(false);
-    expect(wrapper.get('[data-id="many"] .quick-button-clicks').text()).toBe("×1234");
-    expect(wrapper.get('[data-id="used"]').attributes("style") ?? "").not.toContain("--button-usage");
-    await wrapper.setProps({ buttons: [{ id: "used", title: "Used", value: "a", type: "text", hidden: false, clicks: 11 }] });
-    expect(wrapper.get('.quick-button-clicks').text()).toBe("×11");
+    expect(wrapper.find(".quick-button-clicks").exists()).toBe(false);
+    expect(wrapper.get('[data-id="used"]').text()).toBe("Used");
     wrapper.unmount();
   });
 
@@ -457,7 +442,7 @@ describe("QuickButtons", () => {
     await wrapper.setProps({ compact: true });
     expect(wrapper.findAll(".quick-button-icon")).toHaveLength(2);
     expect(wrapper.findAll(".quick-button-label").map(label => label.text())).toEqual(["短标题", "很长的快捷动作标题用于截断"]);
-    expect(wrapper.get('.quick-button[data-id="a"] .quick-button-clicks').text()).toBe("×3");
+    expect(wrapper.find(".quick-button-clicks").exists()).toBe(false);
     await wrapper.get('.quick-button[data-id="a"]').trigger("click");
     expect(wrapper.emitted("copy")?.[0][0]).toBe("a");
     await wrapper.setProps({ compact: false });
@@ -1481,7 +1466,11 @@ describe("QuickButtons", () => {
     const wrapper = mountQuickButtons({ tags: [{ id: "general", title: "常用" }] });
     await wrapper.get(".quick-add-button").trigger("click");
     expect(wrapper.get(".quick-list-dialog").text()).toContain("新建列表");
+    expect(wrapper.get(".quick-list-dialog .quick-dialog-submit").attributes("disabled")).toBeDefined();
+    await wrapper.get(".quick-list-dialog input").setValue("常用");
+    expect(wrapper.get(".quick-list-dialog .quick-dialog-submit").attributes("disabled")).toBeDefined();
     await wrapper.get(".quick-list-dialog input").setValue("工作");
+    expect(wrapper.get(".quick-list-dialog .quick-dialog-submit").attributes("disabled")).toBeUndefined();
     await wrapper.get(".quick-list-dialog form").trigger("submit");
     expect(wrapper.emitted("saveTag")?.[0]).toEqual([{ id: undefined, title: "工作", backgroundColor: "#3b82f6" }]);
     expect(wrapper.find(".quick-form").exists()).toBe(false);

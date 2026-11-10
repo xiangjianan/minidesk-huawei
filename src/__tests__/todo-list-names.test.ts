@@ -84,11 +84,15 @@ describe("reminder list names", () => {
       } },
     });
     await wrapper.vm.open();
+    expect(wrapper.get(".todo-list-create-confirm").text()).toBe(language === "zh" ? "保存" : "Save");
+    expect(wrapper.get(".todo-list-create-confirm").attributes("disabled")).toBeDefined();
     await wrapper.get("input").setValue(" Work ");
+    expect(wrapper.get(".todo-list-create-confirm").attributes("disabled")).toBeDefined();
     await wrapper.get("form").trigger("submit");
     expect(wrapper.emitted("confirm")).toBeUndefined();
     expect(wrapper.get('[role="alert"]').text()).toBe(language === "zh" ? "列表重名了" : "A list with this name already exists");
     await wrapper.get("input").setValue("Personal");
+    expect(wrapper.get(".todo-list-create-confirm").attributes("disabled")).toBeUndefined();
     await wrapper.get("form").trigger("submit");
     expect(wrapper.emitted("confirm")?.[0]?.[1]).toBe("Personal");
     wrapper.unmount();

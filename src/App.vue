@@ -54,6 +54,7 @@ import {
   starTodo,
   todoKey,
   updateTodoFocus,
+  hasTodoFocus,
   updateTodoText,
 } from "./state/todos";
 import { DEFAULT_BOARD_TITLE, defaultWorkspace, STORAGE_KEY } from "./state/defaults";
@@ -62,7 +63,7 @@ import { readWorkbenchWidthRatios, restoreWorkbenchWidthRatios, removeWorkbenchW
 import { createWorkspaceData, ensureUniqueWorkspaceTitle, getWorkspaceBoardTitle, projectLegacySpaceLines, removeWorkspace, reorderWorkspaces } from "./state/workspaces";
 import * as workspaceMover from "./state/workspaceMoves";
 import { mergeImportedWorkspace } from "./state/workspaceImport";
-import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, recordQuickButtonClick, reorderQuickButton, toggleQuickHiddenVisibility } from "./state/quickButtons";
+import { QUICK_BUTTON_OTHER_GROUP_ID, QUICK_DENSITY_THRESHOLD, assignQuickTagColumn, distributeQuickTagColumns, formatQuickCopiedPreview, reorderQuickButton, toggleQuickHiddenVisibility } from "./state/quickButtons";
 import { isQuickAppScheme } from "./state/quickApps";
 import { pickRandomTip, pickWorkbenchTipArea, resolveTipGuideKey, type TipPickState } from "./state/guideTips";
 import { isValidNotifyAt } from "./state/deadlines";
@@ -296,6 +297,7 @@ async function confirmImportMerge(): Promise<void> {
   await pending.finish(result.workspace);
 }
 const exportWorkspaceId = ref<string | null>(null);
+const workspaceExporting = ref(false);
 const exportAnchor = ref<HTMLElement>();
 const exportZones = ref<ZoneKey[]>(["assets", "notes", "tasks", "workspace"]);
 const exportZoneKeys: ZoneKey[] = ["assets", "notes", "tasks", "workspace"];
@@ -306,6 +308,7 @@ const workspaceDraftSlogan = ref("");
 const imagePayloadPruneTimer = ref<number | undefined>();
 const emptyTodoRemovalTimers = new Map<string, number>();
 const pendingImagePayloadDeletions = new Map<string, number>();
+const pendingClearPayloadIds = new Set<string>();
 const shortcutHelpVisible = ref(false);
 const supportDialogVisible = ref(false);
 const updateCheckVisible = ref(false);
@@ -875,29 +878,55 @@ function exportWorkspaceById(id: string, anchor?: HTMLElement): void {
   exportZones.value = [...exportZoneKeys];
 }
 
-function confirmWorkspaceExport(): void {
+async function confirmWorkspaceExport(): Promise<void> {
   const workspace = state.workspaces.find((item) => item.id === exportWorkspaceId.value);
-  if (!workspace || exportZones.value.length === 0) return;
+
+  if (!workspace || exportZones.value.length === 0 || workspaceExporting.value) return;
+  const workspaceId = workspace.id;
+  const zones = [...exportZones.value];
   const serialized = getSerializableWorkspace(workspace, { includeImageData: true });
+
   const empty = defaultWorkspace(workspace.id, state.language);
-  if (!exportZones.value.includes("assets")) serialized.images = [];
-  if (!exportZones.value.includes("notes")) {
+  if (!zones.includes("assets")) serialized.images = [];
+  if (!zones.includes("notes")) {
     Object.assign(serialized, { quickTags: empty.quickTags, quickButtons: [], quickOtherCollapsed: false, showHiddenQuickButtons: false, quickCompact: false, quickLayoutManual: false });
   }
-  if (!exportZones.value.includes("tasks")) {
+  if (!zones.includes("tasks")) {
     Object.assign(serialized, { todoLists: empty.todoLists, todos: empty.todos, showCompletedTodos: empty.showCompletedTodos, todoLayoutManual: false, todoMaxColumns: empty.todoMaxColumns, todoListOrder: undefined, todoColumnLayouts: undefined });
   }
-  if (!exportZones.value.includes("workspace")) {
+  if (!zones.includes("workspace")) {
     Object.assign(serialized, { noteLines: [], workspaceLines: [], storageLines: [], spaces: empty.spaces, activeSpaceId: empty.activeSpaceId });
   }
   const excludedTitles: Record<ZoneKey, string[]> = { assets: ["image-title"], notes: ["quick-title"], tasks: ["todo-morning-title", "todo-noon-title", "todo-evening-title"], workspace: ["workspace-title", "storage-title", "note-title"] };
-  for (const zone of exportZoneKeys) if (!exportZones.value.includes(zone)) {
+  for (const zone of exportZoneKeys) if (!zones.includes(zone)) {
     for (const key of excludedTitles[zone]) delete serialized.customTitles[key];
+  }
+
+  // Focus images and inactive workspace images may only exist in IndexedDB.
+  // Embed every selected payload before generating a portable backup.
+  const imageLists = [serialized.images, ...Object.values(serialized.todos).flatMap((todos) => todos.map((todo) => todo.focusImages ?? []))];
+  const images = imageLists.flat();
+  if (images.some((image) => !image.src)) {
+    workspaceExporting.value = true;
+    try {
+      const hydrated = await hydrateStoredImages(images);
+      if (exportWorkspaceId.value !== workspaceId) return;
+      if (hydrated.some((image) => !image.src)) throw new Error("Image payload missing");
+      let index = 0;
+      for (const list of imageLists) {
+        for (let i = 0; i < list.length; i++) list[i] = hydrated[index++];
+      }
+    } catch {
+      showBubble("imageReadFailed", exportAnchor.value, { hideCompanionAfter: true });
+      return;
+    } finally {
+      workspaceExporting.value = false;
+    }
   }
 
   const ratios = readWorkbenchWidthRatios(workspace.id);
   if (ratios) serialized.zoneWidthRatios = ratios;
-  const content = JSON.stringify({ miniDeskWorkspaceExport: true, version: 1, zones: exportZones.value, workspace: serialized }, null, 2);
+  const content = JSON.stringify({ miniDeskWorkspaceExport: true, version: 1, zones, workspace: serialized }, null, 2);
   const title = getWorkspaceBoardTitle(workspace);
   downloadExportFile(content, `mini-desk-${slugifyTitle(title)}-${exportTimestamp(new Date())}.json`);
   exportWorkspaceId.value = null;
@@ -1017,7 +1046,11 @@ function handleGuideClick(key: GuideKey, anchor?: HTMLElement, immediate = false
 function showAreaGuide(key: GuideKey, anchor?: HTMLElement): void {
   if (bubbleVisible.value && bubbleMessage.value) return;
   if (isGuideAreaEmpty(key, anchor)) {
-    showGuideBubble(key, anchor, false);
+    const workspace = activeWorkspace.value;
+    const emptyBoard = workspace.images.length === 0 && workspace.quickButtons.length === 0
+      && Object.values(workspace.todos).every((todos) => todos.every((todo) => !todo.text.trim()))
+      && workspace.spaces.every((space) => !hasLineContent(space.lines));
+    if (!emptyBoard) showGuideBubble(key, anchor, false);
     return;
   }
   showCompanion(key);
@@ -1144,7 +1177,7 @@ function scheduleImagePayloadPrune(): void {
 }
 
 function isImagePayloadRetained(payloadId: string): boolean {
-  return state.workspaces.some((workspace) =>
+  return pendingClearPayloadIds.has(payloadId) || state.workspaces.some((workspace) =>
     workspace.images.some((image) => getImagePayloadId(image) === payloadId) ||
     Object.values(workspace.todos).some((todos) =>
       todos.some((todo) => (todo.focusImages ?? []).some((image) => getImagePayloadId(image) === payloadId))),
@@ -1180,6 +1213,7 @@ function collectRetainedImagePayloadIds(): Set<string> {
       for (const id of collectTodoFocusPayloadIds(todos)) retained.add(id);
     }
   }
+  pendingClearPayloadIds.forEach((id) => retained.add(id));
   // Snapshots carry pre-extracted payload-id sets, so retention checks no longer
   // re-parse every historical snapshot string on each save.
   for (const snapshot of undoSnapshots.value) {
@@ -1278,6 +1312,8 @@ async function applyExternalStoredState(raw?: string): Promise<void> {
       }
     }
     Object.assign(state, nextState);
+    // A cancellation in another window must not leave a timer running here.
+    if (focusSession.value && !hasTodoFocus(focusTodo.value)) discardFocusSession();
     resetTextGenerationBaseline();
     applyTheme();
     lastUndoSnapshot.value = createUndoSnapshot();
@@ -2181,6 +2217,10 @@ async function openFocusNow(period: TodoPeriod, id: string): Promise<void> {
       });
     }
   }
+  if (!hasTodoFocus(todo)) {
+    activeWorkspace.value.todos = updateTodoFocus(activeWorkspace.value.todos, period, id, { focusStarted: true });
+    persistNow("all", { recordCheckpoint: false });
+  }
   focusSession.value = { period, id, startedAt: Date.now() };
   window.clearInterval(focusCheckpointTimer);
   focusCheckpointTimer = window.setInterval(() => mergeFocusElapsed(true), FOCUS_CHECKPOINT_MS);
@@ -2222,6 +2262,41 @@ watch(focusTodo, (todo, was) => {
   if (todo || !was) return;
   discardFocusSession();
 });
+
+/** 取消专注会清空计时、笔记和图片；图片载荷遵循现有延迟回收机制。 */
+function cancelTodoFocus(period: TodoPeriod, id: string, anchor?: HTMLElement): void {
+  const workspaceId = activeWorkspace.value.id;
+  if (!getTodos(period).some((todo) => todo.id === id)) return;
+  requestConfirmation("confirmCancelFocus", anchor, () => {
+    if (activeWorkspace.value.id !== workspaceId) return;
+    const todo = getTodos(period).find((item) => item.id === id);
+    if (!todo) return;
+    if (focusSession.value?.period === period && focusSession.value.id === id) discardFocusSession();
+    const payloadIds = collectTodoFocusPayloadIds([todo]);
+    const savedFocus = JSON.parse(JSON.stringify({
+      focusStarted: todo.focusStarted,
+      focusElapsedMs: todo.focusElapsedMs,
+      focusNotes: todo.focusNotes,
+      focusImages: todo.focusImages,
+    })) as Pick<TodoItem, "focusStarted" | "focusElapsedMs" | "focusNotes" | "focusImages">;
+    activeWorkspace.value.todos = updateTodoFocus(activeWorkspace.value.todos, period, id, { resetFocus: true });
+    persistNow();
+    const cleanup = () => payloadIds.forEach(scheduleImagePayloadDeletion);
+    showDeleteUndo(uiText.value.todo.focusCancelDone, anchor, () => {
+      const workspace = state.workspaces.find((item) => item.id === workspaceId);
+      const current = workspace?.todos[period]?.find((item) => item.id === id);
+      if (!current || hasTodoFocus(current)) { cleanup(); return; }
+      Object.assign(current, savedFocus);
+      persistNow();
+    }, cleanup);
+  }, undefined, {
+    confirmText: uiText.value.todo.focusCancel,
+    confirmHint: uiText.value.todo.focusCancelHint,
+    cancelText: uiText.value.common.cancel,
+    danger: true,
+    highlightTarget: anchor?.closest<HTMLElement>(".todo-item, .today-focus-item") ?? anchor,
+  });
+}
 
 /** 专注随手记：与空间便签同一文本管线（generation 基线 + 3s 防抖冲刷）。 */
 function updateFocusNotes(period: TodoPeriod, id: string, lines: LineItem[]): void {
@@ -2292,8 +2367,6 @@ function replaceFocusImages(destination: FocusDestination, mutate: (list: Stored
 async function handleQuickButton(id: string, anchor?: HTMLElement): Promise<void> {
   const button = activeWorkspace.value.quickButtons.find((item) => item.id === id);
   if (!button) return;
-  recordQuickButtonClick(button);
-  persistNow();
   if (button.type === "link") {
     // noopener 下 window.open 成功也返回 null（规范行为），返回值判不出弹窗拦截；
     // 与 openQuickApp 同一处理：用户手势触发的打开默认成功，只提示已发起。
@@ -2933,6 +3006,10 @@ function clearData(anchor?: HTMLElement): void {
         ...Object.values(workspace.todos).flatMap((todos) => collectTodoFocusPayloadIds(todos)),
       ]);
 
+      const savedWorkspace = JSON.parse(JSON.stringify(workspace)) as WorkspaceData;
+      const savedWidths = readWorkbenchWidthRatios(workspaceId);
+      payloadIds.forEach((id) => pendingClearPayloadIds.add(id));
+
       window.clearTimeout(textSaveTimer.value);
       textSaveTimer.value = undefined;
       emptyTodoRemovalTimers.forEach((timer) => window.clearTimeout(timer));
@@ -2951,9 +3028,28 @@ function clearData(anchor?: HTMLElement): void {
       persistNow();
       refreshTodoNotifications();
       lastUndoSnapshot.value = createUndoSnapshot();
-      payloadIds.forEach((id) => scheduleImagePayloadDeletion(id));
+
+      const clearedState = JSON.stringify(state.workspaces[index]);
+
       boardEpoch.value += 1;
-      showBubble("dataCleared", anchor, { hideCompanionAfter: true });
+      const cleanup = () => {
+        payloadIds.forEach((id) => { pendingClearPayloadIds.delete(id); scheduleImagePayloadDeletion(id); });
+      };
+      showDeleteUndo(uiText.value.settings.clearDataDone, anchor, () => {
+        const currentIndex = state.workspaces.findIndex((item) => item.id === workspaceId);
+        if (currentIndex < 0 || JSON.stringify(state.workspaces[currentIndex]) !== clearedState) {
+          cleanup();
+          showBubbleText(uiText.value.settings.clearUndoUnavailable, anchor, { hideCompanionAfter: true });
+          return;
+        }
+        payloadIds.forEach((id) => pendingClearPayloadIds.delete(id));
+        state.workspaces.splice(currentIndex, 1, savedWorkspace);
+        if (savedWidths) restoreWorkbenchWidthRatios(workspaceId, savedWidths);
+        resetTextGenerationBaseline();
+        persistNow();
+        refreshTodoNotifications();
+        boardEpoch.value += 1;
+      }, cleanup);
     },
     undefined,
     { confirmText: uiText.value.settings.clearData, cancelText: uiText.value.common.cancel, danger: true, confirmHint: uiText.value.settings.clearDataHint, highlightTarget: null },
@@ -3924,6 +4020,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
           @toggle-completed-visibility="toggleCompletedVisibility"
           @blur-empty="blurEmptyTodo"
           @focus-now="openFocusNow"
+          @cancel-focus="cancelTodoFocus"
           @blur="handleCompanionBlur"
           @move="moveTodo"
           @move-list-to-workspace="moveTodoListAcrossWorkspaces"
@@ -4047,7 +4144,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <NButton type="primary" data-testid="update-check-apply" @click="updateStaticVersion">{{ uiText.updateCheck.update }}</NButton>
       </div>
     </NModal>
-    <NModal :show="importConflict !== null" preset="card" class="workspace-dialog-modal" :title="uiText.app.importConflictTitle" style="max-width: 440px; width: calc(100vw - 32px)" :mask-closable="false" @update:show="(show: boolean) => { if (!show) { importConflict?.cancel(); importConflict = null; } }">
+    <NModal :show="importConflict !== null" :auto-focus="false" preset="card" class="workspace-dialog-modal" :title="uiText.app.importConflictTitle" style="max-width: 440px; width: calc(100vw - 32px)" :mask-closable="false" @update:show="(show: boolean) => { if (!show) { importConflict?.cancel(); importConflict = null; } }">
       <template v-if="importConflict && importPreview">
         <p>{{ uiText.app.importConflictDescription }}</p>
         <p data-testid="import-preview">{{ uiText.app.importPreview.replace("{added}", String(importPreview.added)).replace("{skipped}", String(importPreview.skipped)).replace("{conflicts}", String(importPreview.conflicts)) }}</p>
@@ -4063,7 +4160,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         </div>
       </template>
     </NModal>
-    <NModal :show="exportWorkspaceId !== null" preset="card" class="workspace-dialog-modal" :title="uiText.settings.exportCurrentWorkspace" style="max-width: 360px; width: calc(100vw - 32px)" @update:show="(show: boolean) => { if (!show) exportWorkspaceId = null; }">
+    <NModal :show="exportWorkspaceId !== null" :auto-focus="false" preset="card" class="workspace-dialog-modal" :title="uiText.settings.exportCurrentWorkspace" style="max-width: 360px; width: calc(100vw - 32px)" @update:show="(show: boolean) => { if (!show) exportWorkspaceId = null; }">
       <p class="workspace-export-hint">{{ uiText.app.exportScopeHint }}</p>
       <p>{{ uiText.app.exportChooseZones }}</p>
       <div style="display: flex; flex-direction: column; gap: 12px; margin: 16px 0;">
@@ -4071,7 +4168,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       </div>
       <div class="dialog-actions">
         <NButton @click="exportWorkspaceId = null">{{ uiText.common.cancel }}</NButton>
-        <NButton type="primary" data-testid="confirm-workspace-export" :disabled="exportZones.length === 0" @click="confirmWorkspaceExport">{{ uiText.common.confirm }}</NButton>
+        <NButton type="primary" data-testid="confirm-workspace-export" :disabled="exportZones.length === 0 || workspaceExporting" @click="confirmWorkspaceExport">{{ uiText.common.confirm }}</NButton>
       </div>
     </NModal>
     <NModal
@@ -4093,7 +4190,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         </label>
         <div class="dialog-actions">
           <NButton @click="workspaceDialogVisible = false">{{ uiText.common.cancel }}</NButton>
-          <NButton type="primary" :disabled="!workspaceDraftTitle.trim()" @click="confirmWorkspaceDialog">{{ uiText.common.confirm }}</NButton>
+          <NButton type="primary" :disabled="!workspaceDraftTitle.trim()" @click="confirmWorkspaceDialog">{{ uiText.common.save }}</NButton>
         </div>
       </div>
     </NModal>

@@ -207,11 +207,6 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "标题和内容都要填写。",
       "常用文本也可以做成快捷按钮。",
       "右键菜单可以删除不需要的入口。",
-      "按钮右下角显示累计点击次数。",
-      "×10 表示这个按钮已点击十次。",
-      "每个按钮只统计自己的点击。",
-      "点击次数不会改变按钮背景。",
-      "未使用的按钮不显示次数。",
     ],
     todos: [
       "试试把提醒事项拖到工作空间。",
@@ -342,11 +337,6 @@ export const GUIDE_MESSAGES: Record<AppLanguage, Record<GuideKey, string[]>> = {
       "A shortcut needs both title and content.",
       "Common snippets can become quick buttons.",
       "Use the context menu to delete an entry.",
-      "The bottom-right corner shows total clicks.",
-      "×10 means this button has been clicked ten times.",
-      "Each button only counts its own clicks.",
-      "Click counts never change the button background.",
-      "Unused buttons do not show a count.",
     ],
     todos: [
       "Try dragging a reminder into the memo.",
@@ -444,6 +434,7 @@ export const UI_TEXT = {
     common: {
       hideHeader: "收起顶部栏",
       showHeader: "展开顶部栏",
+      emptyWorkbench: "这里什么都没有，像刚开始的时候",
       tips: "Tips",
       copy: "复制",
       paste: "粘贴",
@@ -552,7 +543,11 @@ export const UI_TEXT = {
       createWorkspace: "新建空间",
       import: "导入空间",
       clearData: "清空当前空间",
-      clearDataHint: "仅清空当前空间的内容，此操作不可撤销，请先备份",
+
+      clearDataHint: "仅清空当前空间的内容，请先备份",
+      clearUndoUnavailable: "空间已发生变化，无法撤销清空",
+      clearDataDone: "清除成功",
+
       gifTheme: "GIF 主题",
       gifQuietMode: "安静模式",
       suggest: "提建议",
@@ -592,12 +587,16 @@ export const UI_TEXT = {
     desk: {
       reminders: "提醒事项",
       notes: "记事本",
+
+      notesEmpty: "记录想法、笔记",
+
       addReminder: "添加提醒",
     },
     quick: {
       newList: "新建列表",
       menu: "快捷动作菜单",
       searchPlaceholder: "搜索快捷动作",
+      emptyHint: "点击 + 添加快捷动作",
       list: "快捷按钮列表",
       add: "新增",
       showHidden: "查看隐藏",
@@ -664,6 +663,7 @@ export const UI_TEXT = {
     },
     images: {
       list: "图片列表",
+      emptyHint: "Ctrl/⌘ + V 粘贴\n或拖入图片",
       thumbnailAlt: "截图缩略图",
       loading: "图片载入中",
       pasteImage: "粘贴图片",
@@ -682,6 +682,10 @@ export const UI_TEXT = {
       columnLimit: "{count} 列",
       todayFocus: "今日重点",
       focusNow: "现在做这个",
+      focusContinue: "继续做这个",
+      focusCancel: "取消做这个",
+      focusCancelDone: "取消做这个成功",
+      focusCancelHint: "计时、贴图和记事本内容都会清空。",
       focusDoing: "正在做",
       focusTitlePrefix: "现在做这个：",
       focusTimer: "专注计时",
@@ -689,7 +693,6 @@ export const UI_TEXT = {
       focusClosePause: "关闭并暂停计时",
       focusClosePreview: "关预览",
       focusBadgeAria: "已专注 {time}，点击继续",
-      focusNotesPlaceholder: "左边贴图、右边记字——在此记录任务笔记（Tab 缩进、右键格式、自动保存）",
       focusImagesLabel: "专注贴图",
       focusAddImage: "粘贴图片",
       done: "完成",
@@ -787,6 +790,7 @@ export const UI_TEXT = {
     common: {
       hideHeader: "Collapse top bar",
       showHeader: "Expand top bar",
+      emptyWorkbench: "There is nothing here, just like when it all began.",
       tips: "Tips",
       copy: "Copy",
       paste: "Paste",
@@ -896,7 +900,11 @@ export const UI_TEXT = {
       createWorkspace: "Create workspace",
       import: "Import workspace",
       clearData: "Clear current workspace",
-      clearDataHint: "Only this workspace’s content will be cleared. This cannot be undone; back up first.",
+
+      clearDataHint: "Only this workspace’s content will be cleared. Back up first.",
+      clearUndoUnavailable: "The workspace has changed, so clearing cannot be undone.",
+      clearDataDone: "Cleared successfully",
+
       gifTheme: "GIF theme",
       gifQuietMode: "Quiet mode",
       suggest: "Feedback",
@@ -936,12 +944,16 @@ export const UI_TEXT = {
     desk: {
       reminders: "Reminders",
       notes: "Notepad",
+
+      notesEmpty: "Capture ideas and notes",
+
       addReminder: "Add reminder",
     },
     quick: {
       newList: "New list",
       menu: "Quick actions menu",
       searchPlaceholder: "Search quick actions",
+      emptyHint: "Click + to add a quick action",
       list: "Quick buttons list",
       add: "Add",
       showHidden: "View hidden",
@@ -1008,6 +1020,7 @@ export const UI_TEXT = {
     },
     images: {
       list: "Image list",
+      emptyHint: "Ctrl/⌘ + V to paste\nor drop an image",
       thumbnailAlt: "Screenshot thumbnail",
       loading: "Loading image",
       pasteImage: "Paste image",
@@ -1026,6 +1039,10 @@ export const UI_TEXT = {
       columnLimit: "{count} column(s)",
       todayFocus: "Pinned reminders",
       focusNow: "Do it now",
+      focusContinue: "Continue this",
+      focusCancel: "Cancel this focus",
+      focusCancelDone: "Focus canceled",
+      focusCancelHint: "The timer, images, and notes will be cleared.",
       focusDoing: "Now doing",
       focusTitlePrefix: "Do this now: ",
       focusTimer: "Focus timer",
@@ -1033,7 +1050,6 @@ export const UI_TEXT = {
       focusClosePause: "Close and pause the timer",
       focusClosePreview: "Close preview",
       focusBadgeAria: "Focused for {time}, click to continue",
-      focusNotesPlaceholder: "Images on the left, words on the right — jot task notes here (Tab indent, right-click formats, autosaves)",
       focusImagesLabel: "Focus images",
       focusAddImage: "Paste image",
       done: "Done",
