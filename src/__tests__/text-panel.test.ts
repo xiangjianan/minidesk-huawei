@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import TextPanel from "../components/TextPanel.vue";
+import { guardSelectionOrigin } from "../utils/selectionOrigin";
 import type { LineItem } from "../types";
 import { menuDropdownStub } from "./helpers/menu-dropdown-stub";
 
@@ -1668,6 +1669,54 @@ describe("TextPanel", () => {
     expect(wrapper.get(".text-mirror").text()).toBe("重点内容普通");
     expect(wrapper.get(".text-mirror .mark-highlight-amber").text()).toBe("重点");
     expect(wrapper.get(".text-mirror .mark-strike").text()).toBe("普通");
+  });
+
+  it("只标记选区内的高亮文字，并在取消选中后恢复", async () => {
+    const wrapper = mount(TextPanel, {
+      attachTo: document.body,
+      props: { titleId: "title", title: "笔记", lines: [{ text: "abcdef", indent: 0, marks: [
+        { type: "highlight", start: 1, end: 5, color: "amber" },
+        { type: "color", start: 1, end: 5, color: "rose" },
+      ] }] },
+    });
+    const textarea = wrapper.get("textarea").element;
+    textarea.focus();
+    textarea.setSelectionRange(2, 4);
+    await wrapper.get("textarea").trigger("selectionchange");
+    expect(wrapper.get(".text-selection-mirror .is-selected.mark-highlight-amber").text()).toBe("cd");
+    expect(wrapper.get(".text-selection-mirror .is-selected.mark-highlight-amber").classes()).toContain("mark-text-rose");
+    expect(wrapper.findAll(".text-selection-mirror .mark-highlight-amber:not(.is-selected)").map((item) => item.text())).toEqual(["b", "e"]);
+    textarea.blur();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get(".text-selection-mirror .is-selected.mark-highlight-amber").text()).toBe("cd");
+    textarea.focus();
+    textarea.setSelectionRange(4, 4);
+    await wrapper.get("textarea").trigger("select");
+    expect(wrapper.find(".text-mirror .is-selected").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("clears the highlighted selection mirror when another control is pressed", async () => {
+    guardSelectionOrigin(document);
+    const button = document.createElement("button");
+    document.body.appendChild(button);
+    const wrapper = mount(TextPanel, {
+      attachTo: document.body,
+      props: { titleId: "title", title: "笔记", lines: [{ text: "abcdef", indent: 0, marks: [
+        { type: "highlight", start: 1, end: 5, color: "amber" },
+      ] }] },
+    });
+    const textarea = wrapper.get("textarea").element;
+    textarea.focus();
+    textarea.setSelectionRange(2, 4);
+    await wrapper.get("textarea").trigger("select");
+    expect(wrapper.find(".text-selection-mirror .is-selected").exists()).toBe(true);
+    button.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 }));
+    await wrapper.vm.$nextTick();
+    expect([textarea.selectionStart, textarea.selectionEnd]).toEqual([2, 2]);
+    expect(wrapper.find(".text-selection-mirror .is-selected").exists()).toBe(false);
+    wrapper.unmount();
+    button.remove();
   });
 
   it("textarea 滚动时镜像层同步 scrollTop", async () => {

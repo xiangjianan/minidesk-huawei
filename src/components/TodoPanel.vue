@@ -1804,8 +1804,11 @@ function rememberTodoCaret(period: TodoPeriod, id: string, event: MouseEvent): v
 
 function handleTodoSelection(period: TodoPeriod, id: string, event: Event): void {
   const input = event.currentTarget as HTMLInputElement;
-  if (!hasSelection(input)) return;
   const key = todoKey(period, id);
+  if (!hasSelection(input)) {
+    lastTodoSelections.delete(key);
+    return;
+  }
   rememberTodoSelection(period, id, input);
   // 仅当输入框仍持焦点（用户正在拖选）才进入编辑态并重申焦点：浏览器在失焦后
   // 还会补发迟到的 select 事件（如点击图片打开预览之后），此时重夺焦点会让

@@ -64,7 +64,29 @@ const text = ref(initialEditorState.text);
 const editorMarks = ref<TextMark[]>(initialEditorState.marks);
 const committedText = ref(initialEditorState.text);
 const mirrorRef = ref<HTMLElement | null>(null);
-const mirrorSegments = computed(() => buildMirrorSegments(text.value, editorMarks.value));
+const selectionMirrorRef = ref<HTMLElement | null>(null);
+const baseMirrorSegments = computed(() => buildMirrorSegments(text.value, editorMarks.value));
+const visibleSelection = ref<{ start: number; end: number } | null>(null);
+const mirrorSegments = computed(() => {
+  const selection = visibleSelection.value;
+  let offset = 0;
+  return baseMirrorSegments.value.flatMap((segment) => {
+    const start = offset;
+    const end = start + segment.chunk.length;
+    offset = end;
+    const boundaries = [start, end];
+    if (selection) {
+      if (selection.start > start && selection.start < end) boundaries.push(selection.start);
+      if (selection.end > start && selection.end < end) boundaries.push(selection.end);
+    }
+    boundaries.sort((a, b) => a - b);
+    return boundaries.slice(0, -1).map((point, index) => ({
+      ...segment,
+      chunk: segment.chunk.slice(point - start, boundaries[index + 1] - start),
+      selected: Boolean(selection && point >= selection.start && point < selection.end),
+    }));
+  });
+});
 /** textarea 会为结尾 \n 多出一行可滚动空行（光标要能落上去），pre-wrap 的 div 不渲染
  *  这条尾随空行——两层 scrollHeight 差一行，滚到接近底部时镜像被钳制、原生选区/光标与
  *  镜像字形错位一行。结尾补一个零宽字符把末行空行的行盒撑出来，滚动范围对齐。 */
@@ -101,18 +123,20 @@ const canDragSelectedText = computed(() => {
   return Boolean(selection && selection.start !== selection.end);
 });
 
-function mirrorSegmentClasses(segment: MirrorSegment): string[] {
+function mirrorSegmentClasses(segment: MirrorSegment & { selected?: boolean }): string[] {
   const classes: string[] = [];
   if (segment.highlight) classes.push(`mark-highlight-${segment.highlight}`);
   if (segment.color) classes.push(`mark-text-${segment.color}`);
   if (segment.strike) classes.push("mark-strike");
   if (segment.underline) classes.push("mark-underline");
+  if (segment.selected) classes.push("is-selected");
   return classes;
 }
 
 function syncMirrorScroll(event: Event): void {
   const textarea = event.currentTarget as HTMLTextAreaElement;
   if (mirrorRef.value) mirrorRef.value.scrollTop = textarea.scrollTop;
+  if (selectionMirrorRef.value) selectionMirrorRef.value.scrollTop = textarea.scrollTop;
 }
 
 let isUnmounted = false;
@@ -129,10 +153,19 @@ function handleTextDragEnd(): void {
   handleDragLeaveClear();
 }
 
-onMounted(exclusiveMenu.mount);
+function syncActiveSelection(): void {
+  const textarea = textareaRef.value;
+  if (textarea && document.activeElement === textarea) syncVisibleSelection(textarea);
+}
+
+onMounted(() => {
+  exclusiveMenu.mount();
+  document.addEventListener("selectionchange", syncActiveSelection);
+});
 onUnmounted(() => {
   isUnmounted = true;
   clearTextDragPreview();
+  document.removeEventListener("selectionchange", syncActiveSelection);
   exclusiveMenu.unmount();
 });
 
@@ -305,6 +338,7 @@ const textPanelClasses = computed(() => ({
 function update(): void {
   if (!editing.value) return;
   const textarea = textareaRef.value;
+  if (textarea) syncVisibleSelection(textarea);
   const previous = editorStateFromLines(props.lines);
   if ((textarea?.value ?? text.value) === previous.text && isSameMarks(previous.marks, editorMarks.value)) return;
   if (textarea) normalizeTextareaText(textarea);
@@ -404,6 +438,7 @@ function revealCaretInTextarea(textarea: HTMLTextAreaElement): void {
   if (Math.abs(next - textarea.scrollTop) < 1) return;
   textarea.scrollTop = next;
   if (mirrorRef.value) mirrorRef.value.scrollTop = textarea.scrollTop;
+  if (selectionMirrorRef.value) selectionMirrorRef.value.scrollTop = textarea.scrollTop;
 }
 
 /**
@@ -501,11 +536,13 @@ function buildMirrorRange(mirror: HTMLElement, start: number, end: number): Rang
 
 function handleFocus(event: FocusEvent): void {
   focused.value = true;
+  syncVisibleSelection(event.currentTarget as HTMLTextAreaElement);
   emit("focus", event.currentTarget as HTMLElement);
 }
 
 function handleBlur(event: FocusEvent): void {
   focused.value = false;
+  syncVisibleSelection(event.currentTarget as HTMLTextAreaElement);
   if (editing.value) update();
   editing.value = false;
   emit("blur", event.currentTarget as HTMLElement);
@@ -748,6 +785,7 @@ function unlockTextareaForMobileKeyboard(textarea: HTMLTextAreaElement, caret: n
 
 function rememberCaret(event: MouseEvent): void {
   const textarea = event.currentTarget as HTMLTextAreaElement;
+  syncVisibleSelection(textarea);
   if (hasSelection(textarea)) {
     rememberTextSelection(textarea);
     return;
@@ -759,6 +797,8 @@ function rememberCaret(event: MouseEvent): void {
 
 function rememberSelection(event: Event): void {
   const textarea = event.currentTarget as HTMLTextAreaElement;
+  syncVisibleSelection(textarea);
+  if (!hasSelection(textarea)) lastTextSelection.value = null;
   rememberTextSelection(textarea);
   textarea.draggable = hasSelection(textarea);
   // 仅当 textarea 仍持焦点（用户正在拖选）才借此进入编辑态：浏览器在失焦后
@@ -768,6 +808,12 @@ function rememberSelection(event: Event): void {
     startEditingFromTextarea(textarea);
     restoreSelection(textarea, getTextSelectionRange(textarea));
   }
+}
+
+function syncVisibleSelection(textarea: HTMLTextAreaElement): void {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  visibleSelection.value = start < end ? { start, end } : null;
 }
 
 function openTextMenu(event: MouseEvent): void {
@@ -948,6 +994,7 @@ function normalizeTextareaText(textarea: HTMLTextAreaElement): void {
     const nextSelectionEnd = getAdjustedSelectionOffset(raw, normalized, selectionEnd);
     textarea.value = normalized;
     if (mirrorRef.value) mirrorRef.value.scrollTop = textarea.scrollTop;
+    if (selectionMirrorRef.value) selectionMirrorRef.value.scrollTop = textarea.scrollTop;
     textarea.setSelectionRange(nextSelectionStart, nextSelectionEnd);
   }
   // Keep the structural edit separate from cascading renumbering when mapping
@@ -1039,6 +1086,7 @@ function restoreEditorSnapshot(textarea: HTMLTextAreaElement, previous: EditorSn
   text.value = previous.text;
   textarea.value = previous.text;
   if (mirrorRef.value) mirrorRef.value.scrollTop = textarea.scrollTop;
+  if (selectionMirrorRef.value) selectionMirrorRef.value.scrollTop = textarea.scrollTop;
   lastUndoState.value = { text: previous.text, marks: [...previous.marks] };
   const caret = Math.min(previous.text.length, textarea.selectionStart ?? previous.text.length);
   textarea.setSelectionRange(caret, caret);
@@ -1078,6 +1126,11 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
     </div>
     <div class="text-editor-frame" @contextmenu="openTextMenu" @dragover="handleDragOver" @drop="handleExternalTextDrop">
       <div ref="mirrorRef" class="text-mirror" aria-hidden="true"><span
+        v-for="(segment, index) in baseMirrorSegments"
+        :key="index"
+        :class="mirrorSegmentClasses(segment)"
+      >{{ segment.chunk }}</span><span v-if="hasTrailingLineBreak" class="mirror-trailing-pad">&#8203;</span></div>
+      <div ref="selectionMirrorRef" class="text-mirror text-selection-mirror" aria-hidden="true"><span
         v-for="(segment, index) in mirrorSegments"
         :key="index"
         :class="mirrorSegmentClasses(segment)"
@@ -1102,6 +1155,7 @@ function restoreSelection(textarea: HTMLTextAreaElement, selection: { start: num
         @wheel="handleTextareaWheel"
         @scroll="syncMirrorScroll"
         @select="rememberSelection"
+        @selectionchange="syncActiveSelection"
         @click="startEditing"
         @dblclick="startEditing"
         @focus="handleFocus"

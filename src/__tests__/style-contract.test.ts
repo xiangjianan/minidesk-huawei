@@ -8,6 +8,16 @@ function expectSelectorBody(styles: string, selector: string, text: string): voi
 }
 
 describe("workbench style contract", () => {
+  it("matches the focus divider handle to the workbench resizer", () => {
+    const styles = readFileSync(resolve(__dirname, "../styles.css"), "utf8");
+    const desk = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
+    expectSelectorBody(styles, "button.focus-now-divider", "var(--line-subtle)");
+    expectSelectorBody(styles, ".focus-now-divider::before", "width: 3px; height: 88px");
+    expectSelectorBody(desk, ".workbench-shell .workbench-resizer::before", "width: 3px; height: 88px");
+    expectSelectorBody(styles, ".focus-now-divider::after", 'content: "‹ ›"');
+    expectSelectorBody(styles, ".focus-now-divider:active::before", "var(--muted) 40%");
+  });
+
   it("keeps image sorting motion above the workbench hover transition", () => {
     const desk = readFileSync(resolve(__dirname, "../desk.css"), "utf8");
     for (const phase of ["move", "enter-active", "leave-active"]) {
@@ -481,9 +491,15 @@ describe("workbench style contract", () => {
     expectSelectorBody(styles, ".text-editor-textarea", "display: block");
     expectSelectorBody(styles, ".text-mirror", "position: absolute");
     expectSelectorBody(styles, ".text-mirror", "pointer-events: none");
-    // 选区必须半透明且字色透明：不透明选区底会盖住镜像层的格式标注（高亮/划线/文字色）。
-    expectSelectorBody(styles, ".text-editor-textarea::selection", "color: transparent");
-    expectSelectorBody(styles, ".text-editor-textarea::selection", "color-mix(in srgb, var(--primary) 26%, transparent)");
+    // 选区由输入层绘制，文字和背景使用主题对应的颜色。
+    expectSelectorBody(styles, ".text-editor-textarea::selection", "color: var(--selection-text)");
+    expectSelectorBody(styles, ".text-editor-textarea::selection", "background: var(--selection-bg)");
+    expectSelectorBody(styles, 'html.theme-switching .text-selection-mirror .is-selected[class*="mark-highlight-"]', "transition: none !important");
+    expectSelectorBody(styles, "::selection", "background: var(--selection-bg)");
+    expectSelectorBody(styles, 'html:not([data-theme="dark"]) .text-selection-mirror .is-selected[class*="mark-highlight-"]', "color: var(--text)");
+    expectSelectorBody(styles, 'html:not([data-theme="dark"]) .text-selection-mirror .is-selected[class*="mark-highlight-"]', "var(--selected-highlight)");
+    expectSelectorBody(styles, 'html[data-theme="dark"] .text-selection-mirror .is-selected[class*="mark-highlight-"]', "color: #fff");
+    expectSelectorBody(styles, 'html[data-theme="dark"] .text-selection-mirror .is-selected[class*="mark-highlight-"]', "var(--selected-highlight)");
   });
 
   it("never paints the focus ring on quick add buttons after dialog focus restore", () => {

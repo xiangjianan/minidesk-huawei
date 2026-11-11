@@ -2723,9 +2723,9 @@ button.todo-star-button {
 
 .todo-item.is-starred .todo-input::selection,
 .today-focus-item .today-focus-input::selection {
-  color: var(--text);
-  -webkit-text-fill-color: var(--text);
-  background: color-mix(in srgb, var(--primary) 26%, transparent);
+  color: var(--selection-text);
+  -webkit-text-fill-color: var(--selection-text);
+  background: var(--selection-bg);
 }
 
 .todo-item.is-starred.is-done .todo-input,
@@ -4229,8 +4229,8 @@ button.workbench-resizer {
 }
 
 ::selection {
-  color: var(--text);
-  background: color-mix(in srgb, var(--primary) 26%, transparent);
+  color: var(--selection-text);
+  background: var(--selection-bg);
 }
 
 :focus-visible:where(:not([data-pointer-focus])) {
@@ -4263,13 +4263,9 @@ textarea:focus,
 
 .n-input .n-input__input-el::selection,
 .n-input .n-input__textarea-el::selection {
-  color: var(--text);
-  background: color-mix(in srgb, var(--primary) 26%, transparent);
-}
-
-html[data-theme="dark"] .n-input .n-input__input-el::selection,
-html[data-theme="dark"] .n-input .n-input__textarea-el::selection {
-  background: color-mix(in srgb, var(--primary) 38%, transparent);
+  color: var(--selection-text);
+  -webkit-text-fill-color: var(--selection-text);
+  background: var(--selection-bg);
 }
 
 .n-input .n-input__input-el:focus,
@@ -4579,6 +4575,8 @@ button.quick-button {
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Animate tag groups sliding into place when the tag list is reordered. */
@@ -6112,17 +6110,53 @@ body,
   z-index: 0;
 }
 
-/* 选区半透明化：原生选区画在 textarea 层（镜像之上），全局 ::selection 的近实底会把
-   高亮/文字颜色糊成一片且白字与镜像字形重影——透明字色防重影，半透明底让格式透出来。 */
+/* 普通选区由输入框直接绘制，避免拖选时镜像层更新带来的闪烁。 */
 .text-editor-textarea::selection {
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  background: color-mix(in srgb, var(--primary) 26%, transparent);
+  color: var(--selection-text);
+  -webkit-text-fill-color: var(--selection-text);
+  background: var(--selection-bg);
 }
 
-html[data-theme="dark"] .text-editor-textarea::selection {
-  background: color-mix(in srgb, var(--primary) 38%, transparent);
+.text-selection-mirror { z-index: 2; color: transparent; }
+.text-selection-mirror span { color: transparent !important; background: transparent !important; text-decoration: none !important; }
+/* 渐变高亮无法插值；底色和文字也同步切换，避免主题过渡时短暂露出错色。 */
+html.theme-switching .text-selection-mirror .is-selected[class*="mark-highlight-"] { transition: none !important; }
+.text-selection-mirror .is-selected[class*="mark-highlight-"] { color: var(--text) !important; border-radius: 0; }
+.text-selection-mirror .is-selected[class*="mark-highlight-"].mark-text-amber { color: var(--mark-text-amber) !important; }
+.text-selection-mirror .is-selected[class*="mark-highlight-"].mark-text-rose { color: var(--mark-text-rose) !important; }
+.text-selection-mirror .is-selected[class*="mark-highlight-"].mark-text-green { color: var(--mark-text-green) !important; }
+.text-selection-mirror .is-selected[class*="mark-highlight-"].mark-text-blue { color: var(--mark-text-blue) !important; }
+.text-selection-mirror .is-selected[class*="mark-highlight-"].mark-text-violet { color: var(--mark-text-violet) !important; }
+.text-selection-mirror .is-selected[class*="mark-highlight-"].mark-strike { text-decoration: line-through !important; }
+.text-selection-mirror .is-selected[class*="mark-highlight-"].mark-underline { text-decoration: underline !important; }
+.text-selection-mirror .is-selected[class*="mark-highlight-"].mark-strike.mark-underline { text-decoration: underline line-through !important; }
+.text-selection-mirror .is-selected.mark-highlight-amber { background: linear-gradient(var(--mark-highlight-amber), var(--mark-highlight-amber)), var(--card) !important; }
+.text-selection-mirror .is-selected.mark-highlight-rose { background: linear-gradient(var(--mark-highlight-rose), var(--mark-highlight-rose)), var(--card) !important; }
+.text-selection-mirror .is-selected.mark-highlight-green { background: linear-gradient(var(--mark-highlight-green), var(--mark-highlight-green)), var(--card) !important; }
+.text-selection-mirror .is-selected.mark-highlight-blue { background: linear-gradient(var(--mark-highlight-blue), var(--mark-highlight-blue)), var(--card) !important; }
+.text-selection-mirror .is-selected.mark-highlight-violet { background: linear-gradient(var(--mark-highlight-violet), var(--mark-highlight-violet)), var(--card) !important; }
+
+/* 浅色主题下选中高亮时稍微淡化原色，并保留不透明底层遮住蓝色选区。 */
+html:not([data-theme="dark"]) .text-selection-mirror .is-selected[class*="mark-highlight-"] {
+  color: var(--text) !important;
+  background: linear-gradient(var(--selected-highlight), var(--selected-highlight)), var(--card) !important;
 }
+html:not([data-theme="dark"]) .text-selection-mirror .mark-highlight-amber { --selected-highlight: color-mix(in srgb, var(--mark-highlight-amber) 80%, transparent); }
+html:not([data-theme="dark"]) .text-selection-mirror .mark-highlight-rose { --selected-highlight: color-mix(in srgb, var(--mark-highlight-rose) 80%, transparent); }
+html:not([data-theme="dark"]) .text-selection-mirror .mark-highlight-green { --selected-highlight: color-mix(in srgb, var(--mark-highlight-green) 80%, transparent); }
+html:not([data-theme="dark"]) .text-selection-mirror .mark-highlight-blue { --selected-highlight: color-mix(in srgb, var(--mark-highlight-blue) 80%, transparent); }
+html:not([data-theme="dark"]) .text-selection-mirror .mark-highlight-violet { --selected-highlight: color-mix(in srgb, var(--mark-highlight-violet) 80%, transparent); }
+
+/* 暗色主题保留高亮色相，稍微提亮，并让选中高亮文字统一为白色。 */
+html[data-theme="dark"] .text-selection-mirror .is-selected[class*="mark-highlight-"] {
+  color: #fff !important;
+  background: linear-gradient(rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.06)), linear-gradient(var(--selected-highlight), var(--selected-highlight)), var(--card) !important;
+}
+html[data-theme="dark"] .text-selection-mirror .mark-highlight-amber { --selected-highlight: var(--mark-highlight-amber); }
+html[data-theme="dark"] .text-selection-mirror .mark-highlight-rose { --selected-highlight: var(--mark-highlight-rose); }
+html[data-theme="dark"] .text-selection-mirror .mark-highlight-green { --selected-highlight: var(--mark-highlight-green); }
+html[data-theme="dark"] .text-selection-mirror .mark-highlight-blue { --selected-highlight: var(--mark-highlight-blue); }
+html[data-theme="dark"] .text-selection-mirror .mark-highlight-violet { --selected-highlight: var(--mark-highlight-violet); }
 
 .text-mirror .mark-strike {
   text-decoration: line-through;
@@ -6410,6 +6444,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   border-radius: 999px;
   transform: translate(-50%, -50%);
   background: transparent;
+  transition: background-color var(--motion-fast) ease;
 }
 .focus-now-divider:hover::before,
 .focus-now-divider:focus-visible::before {
@@ -6425,6 +6460,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   font-size: 20px;
   opacity: 0;
   pointer-events: none;
+  transition: opacity 160ms ease;
 }
 .focus-now-divider:hover::after,
 .focus-now-divider:focus-visible::after,
@@ -6638,22 +6674,10 @@ button.focus-now-divider {
   cursor: col-resize;
   border-radius: 0;
   overflow: visible;
+  background: linear-gradient(to right, transparent calc(50% - 0.5px), var(--line-subtle) calc(50% - 0.5px), var(--line-subtle) calc(50% + 0.5px), transparent calc(50% + 0.5px));
 }
-.focus-now-divider::before {
-  top: 0;
-  width: 1px;
-  height: 100%;
-  border-radius: 0;
-  transform: translateX(-50%);
-  background: var(--line-subtle);
-}
-.focus-now-divider:hover::before,
-.focus-now-divider:focus-visible::before,
 .focus-now-divider:active::before {
-  background: linear-gradient(to bottom,
-    var(--line-subtle) 0 calc(50% - 44px),
-    color-mix(in srgb, var(--muted) 24%, transparent) calc(50% - 44px) calc(50% + 44px),
-    var(--line-subtle) calc(50% + 44px) 100%);
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
 }
 .focus-now-divider::after { text-align: center; line-height: 20px; }
 .focus-now-notes { border: 0; border-radius: 0; padding: 0 18px 16px; background: transparent; }
@@ -6690,8 +6714,8 @@ button.focus-now-divider {
   --dialog-neutral: #f8fafc;
   --dialog-neutral-hover: #edf3f8;
   --dialog-border: #dfe8ef;
-  --dialog-primary: #4b7696;
-  --dialog-primary-hover: #3e6788;
+  --dialog-primary: #3976d2;
+  --dialog-primary-hover: #3068bd;
   --dialog-primary-text: #fff;
   --dialog-danger-bg: #fff1f0;
   --dialog-danger-hover: #ffe4e1;
@@ -6707,6 +6731,14 @@ html[data-theme="dark"] {
   --dialog-danger-bg: #49302f;
   --dialog-danger-hover: #5a3937;
   --dialog-danger-border: #a86661;
+}
+.n-checkbox {
+  --n-box-shadow-focus: none !important;
+}
+.n-modal .n-checkbox {
+  --n-color-checked: var(--dialog-primary) !important;
+  --n-border-checked: 1px solid var(--dialog-primary) !important;
+  --n-check-mark-color: var(--dialog-primary-text) !important;
 }
 :is(.dialog-actions, .workspace-inbox-footer, .support-footer, .companion-actions) > .n-button {
   --n-border-radius: var(--dialog-radius) !important;
@@ -6811,11 +6843,19 @@ html[data-theme="dark"] {
   overflow-wrap: normal;
 }
 
-/* Selection colors match the notebook in both themes. */
-html[data-theme="dark"] ::selection,
-html[data-theme="dark"] .todo-item.is-starred .todo-input::selection,
-html[data-theme="dark"] .today-focus-item .today-focus-input::selection {
-  background: color-mix(in srgb, var(--primary) 38%, transparent);
+/* Text selection shares the dialog accent while keeping each theme legible. */
+:root {
+  --selection-bg: #3976d2;
+  --selection-text: #fff;
+}
+html[data-theme="dark"] {
+  --selection-bg: #9cbcd5;
+  --selection-text: #111;
+}
+:is(.todo-input, .today-focus-input)::selection {
+  color: var(--selection-text);
+  -webkit-text-fill-color: var(--selection-text);
+  background: var(--selection-bg);
 }
 
 .space-panel .desk-paste-button,
