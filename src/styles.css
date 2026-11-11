@@ -5284,6 +5284,7 @@ html:not([data-theme="dark"]) .preview-toolbar-group {
 }
 
 .image-editor-actions {
+  flex-shrink: 0;
   margin-left: auto;
 }
 
@@ -5297,6 +5298,7 @@ html:not([data-theme="dark"]) .preview-toolbar-group {
   background: transparent;
   color: var(--text);
   font-size: var(--app-font-size);
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -6685,11 +6687,11 @@ button.focus-now-divider {
 /* Dialog actions share one geometry and the current theme's colors. */
 :root {
   --dialog-radius: 10px;
-  --dialog-neutral: #f3f5f7;
-  --dialog-neutral-hover: #e8edf1;
-  --dialog-border: #dce2e7;
-  --dialog-primary: #3f6887;
-  --dialog-primary-hover: #335a77;
+  --dialog-neutral: #f8fafc;
+  --dialog-neutral-hover: #edf3f8;
+  --dialog-border: #dfe8ef;
+  --dialog-primary: #4b7696;
+  --dialog-primary-hover: #3e6788;
   --dialog-primary-text: #fff;
   --dialog-danger-bg: #fff1f0;
   --dialog-danger-hover: #ffe4e1;

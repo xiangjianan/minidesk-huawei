@@ -20,6 +20,7 @@ const attempted = ref(false);
 const duplicate = computed(() => props.tags.some(tag => tag.id !== id.value && tag.title.trim() === limitTitle(title.value)));
 const canSubmit = computed(() => Boolean(limitTitle(title.value)) && !duplicate.value);
 async function open(_anchor?: HTMLElement, tag?: QuickTag) {
+  if (_anchor === document.activeElement) _anchor.blur();
   id.value = tag?.id;
   title.value = tag?.title ?? '';
   color.value = tag ? tag.backgroundColor ?? null : nextQuickColor(props.tags);

@@ -20,6 +20,7 @@ const attempted = ref(false);
 let anchor: HTMLElement | undefined;
 
 async function open(element?: HTMLElement, list?: TodoListConfig): Promise<void> {
+  if (element === document.activeElement) element.blur();
   anchor = element;
   editingId.value = list?.id;
   title.value = list?.title ?? "";

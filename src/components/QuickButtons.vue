@@ -317,6 +317,7 @@ const menuOptions = computed<DropdownOption[]>(() => {
 });
 
 function openAdd(anchor?: HTMLElement, tagTitle = "", tagId?: string): void {
+  if (anchor === document.activeElement) anchor.blur();
   editingId.value = undefined;
   form.title = "";
   form.value = "";
