@@ -657,10 +657,11 @@ function handleTodoTextDrop(event: DragEvent, period: TodoPeriod): void {
   if (dragged.value) return;
   const files = Array.from(event.dataTransfer?.files ?? []);
   if (files.length > 0) return;
-  const texts = splitDroppedTodoText(event.dataTransfer?.getData("text/plain") ?? "");
+  const texts = splitDroppedTodoText(event.dataTransfer?.getData("application/x-quick-text") || event.dataTransfer?.getData("text/plain") || "");
   if (texts.length === 0) return;
   event.preventDefault();
   event.stopPropagation();
+  if (getListById(period)?.collapsed) emit("toggleListCollapsed", period, false);
   emit("createFromText", period, texts);
 }
 
@@ -1722,6 +1723,7 @@ async function pasteTodosFromClipboard(period: TodoPeriod): Promise<void> {
   }
   const texts = splitDroppedTodoText(probe.text);
   if (texts.length === 0) return;
+  if (getListById(period)?.collapsed) emit("toggleListCollapsed", period, false);
   emit("createFromText", period, texts);
 }
 
@@ -1849,7 +1851,7 @@ function getListIdFromDragEvent(event: DragEvent): TodoListId | null {
 
 function handleTodoDragOver(event: DragEvent): void {
   const types = Array.from(event.dataTransfer?.types ?? []);
-  if (types.includes("text/plain") && !types.includes("Files")) {
+  if ((types.includes("text/plain") || types.includes("application/x-quick-text")) && !types.includes("Files")) {
     dragHoverListId.value = getListIdFromDragEvent(event);
   }
   if (dragged.value) {
@@ -2127,6 +2129,7 @@ onUnmounted(() => focusRegionAnimation?.cancel());
       >
         <div
           class="todo-heading"
+          :class="{ 'is-sort-drop-target': list.collapsed && dragHoverListId === list.id }"
           :draggable="!isListTitleEditing(list.id)"
           @contextmenu="openHeadingActions($event, list.id)"
           @dragstart="handleListDragStart($event, list.id)"

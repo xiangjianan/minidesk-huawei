@@ -79,6 +79,30 @@ describe('sorting landing gap', () => {
     expect(gap.indexTarget()).toBe(items[0]);
     gap.restore();
   });
+  it.each([
+    ['todo', '.todo-item', 'todo-section', 'todo-heading', 'todo-list'],
+    ['quick action', '.quick-button', 'quick-tag-group', 'quick-tag-heading', 'quick-buttons'],
+  ])('animates the source list height when dragging a %s to a collapsed list', (_name, selector, groupClass, headingClass, listClass) => {
+    const root = document.body.appendChild(document.createElement('div'));
+    root.innerHTML = `<section class="${groupClass}"><div class="${headingClass}">Source</div><div class="${listClass}"><div class="${selector.slice(1)}">Item</div></div></section><section class="${groupClass} is-collapsed"><div class="${headingClass}">Target</div><div class="quick-tag-content is-collapsed"></div></section>`;
+    const group = root.firstElementChild as HTMLElement;
+    const source = group.querySelector<HTMLElement>(selector)!;
+    const heading = root.lastElementChild!.firstElementChild as HTMLElement;
+    vi.spyOn(source, 'getBoundingClientRect').mockReturnValue({ height: 40, width: 120 } as DOMRect);
+    vi.spyOn(heading, 'getBoundingClientRect').mockReturnValue({ left: 0, right: 120, top: 100, bottom: 140, width: 120, height: 40 } as DOMRect);
+    vi.spyOn(group, 'getBoundingClientRect').mockImplementation(() => ({ height: group.querySelector<HTMLElement>('.sort-gap')?.style.display === 'none' ? 40 : 80 } as DOMRect));
+    group.animate = vi.fn(() => ({ cancel: vi.fn() }) as unknown as Animation);
+    let hit: Element = heading;
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => hit });
+    const gap = createSortGap(source, selector);
+    gap.update(root, 20, 120);
+    expect(group.animate).toHaveBeenCalledWith([{ height: '80px', boxSizing: 'border-box' }, { height: '40px', boxSizing: 'border-box' }], expect.anything());
+    hit = group.querySelector(`.${headingClass}`)!;
+    gap.update(root, 20, 20);
+    expect(group.animate).toHaveBeenCalledTimes(2);
+    gap.restore();
+  });
+
   it('accepts blank space beside a single quick button and animates group height changes', () => {
     const root = document.body.appendChild(document.createElement('div'));
     root.innerHTML = '<section class="quick-tag-group"><div class="quick-buttons"><button class="quick-button">A</button></div></section><section class="quick-tag-group"><div class="quick-buttons"><button class="quick-button">B</button></div></section>';

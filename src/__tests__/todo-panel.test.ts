@@ -1947,6 +1947,22 @@ describe("TodoPanel", () => {
     }
   });
 
+  it("uses the sort target border for a collapsed text drop target", async () => {
+    const wrapper = mount(TodoPanel, {
+      props: { todoLists: [{ id: "morning", title: "收起", collapsed: true, compact: false }, { id: "noon", title: "展开", collapsed: false, compact: false }], todos: { morning: [], noon: [] }, titles: DEFAULT_TITLES },
+      global: { stubs: { Button: true, Dropdown: dropdownStub, NDropdown: dropdownStub, NTooltip: tooltipStub } },
+    });
+    const dataTransfer = { types: ["text/plain"] };
+    const closed = wrapper.get('[data-list-id="morning"] .todo-heading');
+    const open = wrapper.get('[data-list-id="noon"] .todo-heading');
+    await closed.trigger("dragover", { dataTransfer });
+    expect(closed.classes()).toContain("is-sort-drop-target");
+    await open.trigger("dragover", { dataTransfer });
+    expect(closed.classes()).not.toContain("is-sort-drop-target");
+    expect(open.classes()).not.toContain("is-sort-drop-target");
+    wrapper.unmount();
+  });
+
   it("expands a collapsed list before creating a reminder from the heading add button", async () => {
     // 收起时点加号：必须先展开再新增，否则空提醒被塞进 inert 隐藏的列表里，
     // createTodo 的 nextTick 聚焦也会对 inert 输入框静默失败。

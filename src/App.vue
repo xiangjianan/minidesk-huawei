@@ -3854,6 +3854,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
       :title="boardTitle"
       :slogan="boardSlogan"
       :save-status-label="workspaceDensityLabel"
+      :crowded="workspaceDensityStatus === 'dirty'"
       :language="state.language"
       :assets-title="titles['image-title']"
       :notes-title="titles['quick-title']"
@@ -4151,7 +4152,7 @@ function moveItem<T extends { id: string }>(items: T[], dragId: string, targetId
         <p v-if="importConflict.legacy">{{ uiText.app.importLegacyNotice }}</p>
         <NCheckbox v-if="importPreview.conflicts" v-model:checked="importCopyConflicts" data-testid="import-copy-conflicts">{{ uiText.app.importCopyConflicts }}</NCheckbox>
         <p v-if="importReplaceConfirm">{{ uiText.app.importReplaceWarning }}</p>
-        <div class="dialog-actions" style="margin-top:16px;">
+        <div class="dialog-actions import-conflict-actions" style="margin-top:16px;">
           <NButton data-testid="import-cancel" @click="importConflict.cancel(); importConflict = null">{{ uiText.common.cancel }}</NButton>
           <NButton data-testid="import-add" @click="() => { const pending = importConflict; importConflict = null; void pending?.add(); }">{{ uiText.app.importAddCopy }}</NButton>
           <NButton v-if="!importReplaceConfirm" data-testid="import-replace" @click="importReplaceConfirm = true">{{ uiText.app.importReplace }}</NButton>

@@ -426,6 +426,21 @@ describe("SpacePanel", () => {
     wrapper.unmount();
   });
 
+  it("appends dragged text to the targeted notebook tab", async () => {
+    const wrapper = mountSpacePanel([
+      { id: "workspace", title: "工作空间", lines: [] },
+      { id: "project", title: "项目", lines: [{ text: "Existing", indent: 0 }] },
+    ]);
+    const dataTransfer = { types: ["text/plain"], getData: (mime: string) => mime === "text/plain" ? "New note" : "" };
+    const tab = wrapper.findAll(".space-tab")[1];
+    await tab.trigger("dragover", { dataTransfer });
+    expect(tab.classes()).toContain("is-sort-drop-target");
+    await tab.trigger("drop", { dataTransfer });
+    expect(wrapper.emitted("update")?.[0]).toEqual(["project", [{ text: "Existing", indent: 0 }, { text: "New note", indent: 0 }]]);
+    expect(tab.classes()).not.toContain("is-sort-drop-target");
+    wrapper.unmount();
+  });
+
   it("lets a todo dropped on a space tab reach the panel-level paste handler", async () => {
     const wrapper = mountSpacePanel([
       { id: "workspace", title: "工作空间", lines: [] },

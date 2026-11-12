@@ -675,6 +675,7 @@ function handleExternalQuickDrop(event: DragEvent, groupId: string): boolean {
   dragHoverGroupId.value = null;
   const text = readQuickDropText(event.dataTransfer);
   if (!text.trim()) return false;
+  if (groupedButtons.value.find((group) => group.id === groupId)?.collapsed) emit("toggleTagCollapsed", groupId);
   emit("save", buildQuickDropPayload(text, groupId));
   return true;
 }
@@ -901,7 +902,7 @@ function handleQuickGroupDrop(event: DragEvent, groupId: string): void {
           <div
             v-if="group.title"
             class="quick-tag-heading"
-            :class="{ 'is-dragging': draggingTagId === group.id, 'is-static': !group.reorderable, 'is-editing': editingTagId === group.id }"
+            :class="{ 'is-dragging': draggingTagId === group.id, 'is-static': !group.reorderable, 'is-editing': editingTagId === group.id, 'is-sort-drop-target': group.collapsed && dragHoverGroupId === group.id }"
             :draggable="group.reorderable && editingTagId !== group.id"
             @dblclick="startInlineTagRename(group.id, group.title)"
             @contextmenu="openTagMenu($event, group.id)"

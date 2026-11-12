@@ -1121,6 +1121,7 @@ button.image-card {
   flex-direction: column;
   flex-shrink: 0;
   gap: 0;
+  transition: background-color var(--motion-fast) ease;
 }
 
 .quick-tag-content {
@@ -1131,7 +1132,8 @@ button.image-card {
   opacity: 1;
   transition:
     grid-template-rows var(--motion-medium) var(--motion-ease),
-    opacity var(--motion-fast) ease;
+    opacity var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
 }
 
 .quick-tag-clip {
@@ -1174,6 +1176,12 @@ button.image-card {
   line-height: 1.4;
   cursor: grab;
   user-select: none;
+}
+
+:is(.todo-heading, .quick-tag-heading) {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  transition: outline-color var(--motion-fast) ease, background-color var(--motion-fast) ease;
 }
 
 .quick-tag-heading.is-static {
@@ -1777,7 +1785,8 @@ button.quick-button {
   overflow: hidden;
   transition:
     grid-template-rows var(--motion-medium) var(--motion-ease),
-    opacity var(--motion-fast) ease;
+    opacity var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
 }
 
 .todo-list-shell.is-hidden {
@@ -3136,13 +3145,6 @@ button.companion-undo-button {
   border: 1px solid var(--border) !important;
   background: var(--popover) !important;
   box-shadow: none !important;
-}
-
-/* 危险二次确认（删除/清理）：气泡与箭头同染浅红，和被删目标的浅红底色一致；
-   色相同步 [data-confirm-target]（danger 14%），基色换成不透明的 --popover。 */
-.companion-popover-shell.n-popover.is-confirm-danger,
-.companion-popover-shell.n-popover.is-confirm-danger .companion-popover-arrow {
-  background: color-mix(in srgb, var(--danger) 14%, var(--popover)) !important;
 }
 
 .companion-actions {
@@ -6580,7 +6582,7 @@ body:has(.image-preview) .n-modal-container:has(.focus-now-modal) .n-modal-mask 
   outline-offset: -1px;
 }
 
-:root :is(.todo-heading, .quick-tag-heading).is-sort-drop-target {
+:root :is(.todo-heading, .quick-tag-heading, .space-tab).is-sort-drop-target {
   background: color-mix(in srgb, var(--line-focus) 12%, var(--card));
   outline: 2px solid var(--line-focus);
   outline-offset: -2px;
@@ -6794,6 +6796,18 @@ html[data-theme="dark"] {
   --n-text-color-focus: var(--danger) !important;
   color: var(--danger) !important;
 }
+/* Match the reminder time picker's clear action, including Naive's button chrome. */
+.companion-actions > .n-button.is-danger {
+  background: var(--dialog-danger-bg) !important;
+  border: 1px solid var(--dialog-danger-border) !important;
+  color: var(--danger) !important;
+}
+.companion-actions > .n-button.is-danger:hover {
+  background: var(--dialog-danger-hover) !important;
+}
+.companion-actions > .n-button.is-danger :is(.n-button__border, .n-button__state-border) {
+  border-color: transparent !important;
+}
 :is(.dialog-actions, .workspace-inbox-footer, .support-footer, .companion-actions) > .n-button.n-button--disabled {
   --n-color-disabled: var(--dialog-neutral) !important;
   --n-border-disabled: 1px solid var(--dialog-border) !important;
@@ -6871,3 +6885,6 @@ html.selection-outside-todos :is(.todo-input, .today-focus-input) {
   -webkit-user-select: none;
   user-select: none;
 }
+
+.import-conflict-actions { flex-wrap: wrap; }
+.import-conflict-actions > .n-button { flex: 1 0 auto; white-space: nowrap; }

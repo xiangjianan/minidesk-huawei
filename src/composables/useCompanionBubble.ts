@@ -302,7 +302,7 @@ export function useCompanionBubble(deps: CompanionBubbleDeps) {
       onCancel,
       confirmText: options.confirmText ?? labels.yes,
       cancelText: options.cancelText ?? labels.no,
-      danger: options.danger ?? /删除|清理|Delete|Clear/.test(options.confirmText ?? ""),
+      danger: options.danger ?? (/^confirmDelete/.test(messageKey) || /删除|清理|Delete|Clear/.test(options.confirmText ?? "")),
       confirmHint: options.confirmHint,
       secondaryText: options.secondaryText,
       onSecondary: options.onSecondary,

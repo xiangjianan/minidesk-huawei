@@ -28,11 +28,13 @@ describe("WorkbenchShell", () => {
     expect(css).toMatch(/\.empty-workbench-message\s*\{[^}]*z-index:\s*1[^}]*pointer-events:\s*none/s);
   });
 
-  it("shows the empty message only when all areas and the header are hidden", async () => {
+  it("shows the empty message only when the desk is crowded and all areas and the header are hidden", async () => {
     const hidden = { assets: false, notes: false, tasks: false, workspace: false };
     const wrapper = mount(WorkbenchShell, { props: { title: "MiniDesk", saveStatusLabel: "", zoneVisibility: hidden } });
     expect(wrapper.find("[data-testid=empty-workbench-message]").exists()).toBe(false);
     await wrapper.get("[data-testid=workbench-header-hide]").trigger("click");
+    expect(wrapper.find("[data-testid=empty-workbench-message]").exists()).toBe(false);
+    await wrapper.setProps({ crowded: true });
     expect(wrapper.get("[data-testid=empty-workbench-message]").text()).toBe("这里什么都没有，像刚开始的时候");
     await wrapper.setProps({ language: "en" });
     expect(wrapper.get("[data-testid=empty-workbench-message]").text()).toBe("There is nothing here, just like when it all began.");

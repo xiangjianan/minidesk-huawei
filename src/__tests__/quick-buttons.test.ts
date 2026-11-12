@@ -862,6 +862,19 @@ describe("QuickButtons", () => {
     wrapper.unmount();
   });
 
+  it("uses the sort target border only for a collapsed text drop target", async () => {
+    const wrapper = mountQuickButtons({ tags: [{ id: "first", title: "工作", collapsed: true }, { id: "second", title: "生活", collapsed: false }], buttons: [] });
+    const dataTransfer = { types: ["text/plain"], getData: () => "文字" };
+    const closed = wrapper.get('[data-tag-id="first"] .quick-tag-heading');
+    const open = wrapper.get('[data-tag-id="second"] .quick-tag-heading');
+    await closed.trigger("dragover", { dataTransfer });
+    expect(closed.classes()).toContain("is-sort-drop-target");
+    await open.trigger("dragover", { dataTransfer });
+    expect(closed.classes()).not.toContain("is-sort-drop-target");
+    expect(open.classes()).not.toContain("is-sort-drop-target");
+    wrapper.unmount();
+  });
+
   it("highlights only the target tag and keeps the highlight when moving between its children", async () => {
     const wrapper = mountQuickButtons({
       tags: [{ id: "first", title: "工作" }, { id: "second", title: "生活" }],
