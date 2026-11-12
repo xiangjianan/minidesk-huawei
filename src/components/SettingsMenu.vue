@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onBeforeUnmount, ref, watch } from "vue";
+import { computed, h, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   Plus as AddOutline,
   Check as CheckmarkOutline,
@@ -275,7 +275,20 @@ function clearCustomGifPreviews(): void {
   revokeCustomGifPreview("dark");
 }
 
-onBeforeUnmount(() => { clearCustomGifPreviews(); menuAim.stop(); });
+// Sortable notebook tabs prevent pointerdown's default action, so close before
+// the dropdown's outside-click handling can miss the interaction.
+function closeOnNotebookTabPointerDown(event: PointerEvent): void {
+  if (event.button === 0 && event.target instanceof Element && event.target.closest(".space-tab[role=tab]")) {
+    menuOpen.value = false;
+    keepOpenAfterPreferenceSelect = false;
+  }
+}
+onMounted(() => document.addEventListener("pointerdown", closeOnNotebookTabPointerDown, true));
+onBeforeUnmount(() => {
+  document.removeEventListener("pointerdown", closeOnNotebookTabPointerDown, true);
+  clearCustomGifPreviews();
+  menuAim.stop();
+});
 
 function focusCustomGifDialog(): void {
   document.querySelector<HTMLElement>(".gif-theme-custom-modal")?.focus({ preventScroll: true });

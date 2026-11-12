@@ -201,6 +201,15 @@ describe("clearMarksInRange — 清除", () => {
 });
 
 describe("buildMirrorSegments — 镜像分段", () => {
+  it("keeps underline and strikethrough together when toggled in either order", () => {
+    for (const [first, second] of [["underline", "strike"], ["strike", "underline"]] as const) {
+      const range = { start: 0, end: 5 };
+      const marks = toggleMarkInRange("hello", toggleMarkInRange("hello", [], range, first), range, second);
+      expect(buildMirrorSegments("hello", marks)).toEqual([{ chunk: "hello", strike: true, underline: true }]);
+      expect(toggleMarkInRange("hello", marks, range, first)).toEqual([{ type: second, start: 0, end: 5 }]);
+    }
+  });
+
   it("无 marks 时整段一次输出", () => {
     expect(buildMirrorSegments("hello", [])).toEqual([{ chunk: "hello" }]);
   });

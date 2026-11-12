@@ -3133,6 +3133,11 @@ button.companion-undo-button {
   transition: opacity 0.26s ease, transform 0.26s ease;
 }
 
+.companion-popover-shell.n-popover.is-confirm-danger,
+.companion-popover-shell.n-popover.is-confirm-danger .companion-popover-arrow {
+  background: var(--dialog-danger-bg) !important;
+}
+
 .companion-popover-shell.n-popover.is-replacing {
   transition-duration: 0.18s;
 }
@@ -6121,6 +6126,10 @@ body,
 
 .text-selection-mirror { z-index: 2; color: transparent; }
 .text-selection-mirror span { color: transparent !important; background: transparent !important; text-decoration: none !important; }
+/* 在线条镜像中保持字形透明，只将选中文字的线条绘制在原生蓝色选区之上。 */
+.text-selection-mirror .is-selected.mark-strike:not([class*="mark-highlight-"]) { text-decoration: line-through !important; text-decoration-color: var(--selection-text) !important; }
+.text-selection-mirror .is-selected.mark-underline:not([class*="mark-highlight-"]) { text-decoration: underline !important; text-decoration-color: var(--selection-text) !important; }
+.text-selection-mirror .is-selected.mark-strike.mark-underline:not([class*="mark-highlight-"]) { text-decoration: underline line-through !important; text-decoration-color: var(--selection-text) !important; }
 /* 渐变高亮无法插值；底色和文字也同步切换，避免主题过渡时短暂露出错色。 */
 html.theme-switching .text-selection-mirror .is-selected[class*="mark-highlight-"] { transition: none !important; }
 .text-selection-mirror .is-selected[class*="mark-highlight-"] { color: var(--text) !important; border-radius: 0; }
@@ -6888,3 +6897,67 @@ html.selection-outside-todos :is(.todo-input, .today-focus-input) {
 
 .import-conflict-actions { flex-wrap: wrap; }
 .import-conflict-actions > .n-button { flex: 1 0 auto; white-space: nowrap; }
+
+/* 图片预览与编辑工具栏中的圆形玻璃按钮。 */
+button.preview-toolbar-button,
+.image-editor--preview :is(.image-editor-tool, .image-editor-reset) {
+  flex: 0 0 auto;
+  padding: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--material-elevated) 30%, transparent);
+}
+button.preview-toolbar-button { background: transparent; }
+button.preview-toolbar-button:hover:not(:disabled),
+button.preview-toolbar-button:focus-visible:not(:disabled),
+.image-editor--preview :is(.image-editor-tool, .image-editor-reset):hover:not(:disabled),
+.image-editor--preview :is(.image-editor-tool, .image-editor-reset):focus-visible {
+  background: color-mix(in srgb, var(--material-elevated) 55%, transparent);
+}
+.image-editor--preview .image-editor-tool.is-active {
+  background: color-mix(in srgb, var(--line-focus) 25%, transparent);
+}
+.image-editor--preview .image-editor-actions > :is(.image-editor-cancel, .image-editor-save) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 52px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--material-elevated) 35%, transparent);
+  color: var(--text);
+}
+.image-editor--preview .image-editor-actions > :is(.image-editor-cancel, .image-editor-save):hover {
+  background: color-mix(in srgb, var(--material-elevated) 60%, transparent);
+}
+.image-editor--preview .image-editor-actions > .image-editor-save {
+  border-color: color-mix(in srgb, var(--line-focus) 70%, transparent);
+  background: color-mix(in srgb, var(--line-focus) 22%, transparent);
+  color: var(--text);
+}
+.image-editor--preview .image-editor-actions > .image-editor-save:hover {
+  background: color-mix(in srgb, var(--line-focus) 35%, transparent);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .image-editor--preview :is(.image-editor-tool, .image-editor-reset),
+  .image-editor--preview .image-editor-actions > :is(.image-editor-cancel, .image-editor-save) {
+    background: var(--card);
+  }
+}
+.image-editor--preview .image-editor-color {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  padding: 0;
+  border-radius: 50%;
+}
+@media (prefers-reduced-transparency: reduce) {
+  button.preview-toolbar-button { background: transparent !important; }
+  button.preview-toolbar-button:hover:not(:disabled),
+  button.preview-toolbar-button:focus-visible:not(:disabled) { background: var(--card) !important; }
+}

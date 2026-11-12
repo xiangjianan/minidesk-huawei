@@ -494,6 +494,8 @@ describe("workbench style contract", () => {
     // 选区由输入层绘制，文字和背景使用主题对应的颜色。
     expectSelectorBody(styles, ".text-editor-textarea::selection", "color: var(--selection-text)");
     expectSelectorBody(styles, ".text-editor-textarea::selection", "background: var(--selection-bg)");
+    expectSelectorBody(styles, '.text-selection-mirror .is-selected.mark-strike.mark-underline:not([class*="mark-highlight-"])', "text-decoration: underline line-through !important");
+    expectSelectorBody(styles, '.text-selection-mirror .is-selected.mark-strike.mark-underline:not([class*="mark-highlight-"])', "text-decoration-color: var(--selection-text) !important");
     expectSelectorBody(styles, 'html.theme-switching .text-selection-mirror .is-selected[class*="mark-highlight-"]', "transition: none !important");
     expectSelectorBody(styles, "::selection", "background: var(--selection-bg)");
     expectSelectorBody(styles, 'html:not([data-theme="dark"]) .text-selection-mirror .is-selected[class*="mark-highlight-"]', "color: var(--text)");
